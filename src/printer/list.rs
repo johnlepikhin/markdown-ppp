@@ -15,9 +15,9 @@ impl<'a> ToDoc<'a> for List {
             0
         };
         let prefix_length = match &self.kind {
-            ListKind::Bullet(ListBulletKind::Dash) => 3, // <space>-<space>
-            ListKind::Bullet(ListBulletKind::Star) => 3, // <space>*<space>
-            ListKind::Bullet(ListBulletKind::Plus) => 3, // <space>+<space>
+            ListKind::Bullet(ListBulletKind::Dash) => 2 + config.spaces_before_list_item, // <space>-<space>
+            ListKind::Bullet(ListBulletKind::Star) => 2 + config.spaces_before_list_item, // <space>*<space>
+            ListKind::Bullet(ListBulletKind::Plus) => 2 + config.spaces_before_list_item, // <space>+<space>
             ListKind::Ordered(v) => {
                 let last = v.start + self.items.len() as u64 - 1;
                 let digits = last.to_string().len();

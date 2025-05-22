@@ -1,6 +1,7 @@
 use crate::ast::{ListBulletKind, ListItem, ListKind, ListOrderedKindOptions, TaskState};
 use crate::parser::util::*;
 use crate::parser::MarkdownParserState;
+use nom::combinator::verify;
 use nom::{
     branch::alt,
     character::complete::{char, one_of, space0},
@@ -143,7 +144,16 @@ fn list_item_rest_line(
                     (),
                     crate::parser::blocks::thematic_break::thematic_break(state.clone()),
                 ),
-                value((), (many_m_n(0, prefix_length, char(' ')), marker_parser)),
+                value(
+                    (),
+                    (
+                        verify(
+                            recognize(many_m_n(0, prefix_length, char(' '))),
+                            |indent: &str| indent.len() < prefix_length,
+                        ),
+                        marker_parser,
+                    ),
+                ),
             )))),
             alt((
                 // If starts with 0 <= prefix_length spaces

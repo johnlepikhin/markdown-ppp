@@ -14,6 +14,13 @@ use rstest::rstest;
     case(
         r#"9. item1
 10. item2"#
+    ),
+    case(
+        r#"- item1
+- item2
+  
+  - item2 1
+  - item2 2"#
     )
 )]
 fn symmetric_round_trip_list(input: &str) {
