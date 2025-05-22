@@ -21,7 +21,7 @@ impl<'a> ToDoc<'a> for List {
             ListKind::Ordered(v) => {
                 let last = v.start + self.items.len() as u64 - 1;
                 let digits = last.to_string().len();
-                digits + 3 // <space>1.<space>
+                digits + 2 + config.spaces_before_list_item // <space>1.<space>
             }
         };
         let items = self.items.iter().map(|item| {
