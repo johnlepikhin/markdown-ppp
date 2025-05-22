@@ -42,8 +42,10 @@ impl<'a> ToDoc<'a> for List {
                 None => arena.nil(),
             };
 
+            let indent = " ".repeat(config.spaces_before_list_item);
+
             arena
-                .space()
+                .text(indent)
                 .append(arena.text(marker.clone()))
                 .append(arena.space())
                 .append(task_list_marker)

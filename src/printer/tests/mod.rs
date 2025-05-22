@@ -1,6 +1,8 @@
 #![cfg(test)]
 use rstest::rstest;
 
+mod list;
+
 #[rstest(input,
          case("---"),
         case(
