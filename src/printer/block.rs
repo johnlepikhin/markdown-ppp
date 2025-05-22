@@ -9,15 +9,8 @@ impl<'a> ToDoc<'a> for Vec<Block> {
         config: Rc<crate::printer::config::Config>,
         arena: &'a Arena<'a>,
     ) -> DocBuilder<'a, Arena<'a>, ()> {
-        let mut acc = arena.nil();
-        for (i, block) in self.iter().enumerate() {
-            if i > 0 {
-                // между блоками — пустая строка
-                acc = acc.append(arena.hardline()).append(arena.hardline());
-            }
-            acc = acc.append(block.to_doc(config.clone(), arena));
-        }
-        acc
+        let refs: Vec<_> = self.iter().collect();
+        refs.to_doc(config, arena)
     }
 }
 
@@ -29,11 +22,17 @@ impl<'a> ToDoc<'a> for Vec<&Block> {
     ) -> DocBuilder<'a, Arena<'a>, ()> {
         let mut acc = arena.nil();
         for (i, block) in self.iter().enumerate() {
-            if i > 0 {
-                // между блоками — пустая строка
+            if i == 1
+                && matches!(block, crate::ast::Block::List(_))
+                && !config.empty_line_before_list
+            {
+                // no extra empty line before parent list item and nested list
+                acc = acc.append(arena.hardline());
+            } else if i > 0 {
+                // empty line between blocks
                 acc = acc.append(arena.hardline()).append(arena.hardline());
             }
-            acc = acc.append(block.to_doc(config.clone(), arena));
+            acc = acc.append(block.to_doc(config.clone(), arena))
         }
         acc
     }

@@ -1,6 +1,7 @@
 pub struct Config {
     pub(crate) width: usize,
     pub(crate) spaces_before_list_item: usize,
+    pub(crate) empty_line_before_list: bool,
 }
 
 impl Default for Config {
@@ -8,6 +9,7 @@ impl Default for Config {
         Self {
             width: 80,
             spaces_before_list_item: 1,
+            empty_line_before_list: true,
         }
     }
 }
@@ -34,6 +36,16 @@ impl Config {
     pub fn with_spaces_before_list_item(self, spaces: usize) -> Self {
         Self {
             spaces_before_list_item: spaces,
+            ..self
+        }
+    }
+
+    /// Sets whether to add an empty line before lists.
+    ///
+    /// The default is `true`, which means that lists are preceded by an empty line.
+    pub fn with_empty_line_before_list(self, tight: bool) -> Self {
+        Self {
+            empty_line_before_list: tight,
             ..self
         }
     }
