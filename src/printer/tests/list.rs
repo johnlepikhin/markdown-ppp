@@ -35,6 +35,19 @@ fn symmetric_round_trip_list_with_spaces_before_list_item(input: &str) {
 #[rstest(
     input,
     case(
+        r#"# head1
+ - item1
+ - item2
+
+# head2
+ - item3
+ - item4
+
+# head3
+ - item5
+ - item6"#
+    ),
+    case(
         r#" - item1
  - item2
     - item2 1
@@ -49,7 +62,7 @@ fn symmetric_round_trip_list_with_spaces_before_list_item(input: &str) {
        - item2 2 2"#
     )
 )]
-fn symmetric_round_trip_list_with_empty_line_before_list(input: &str) {
+fn symmetric_round_trip_list_without_empty_line_before_list(input: &str) {
     let config = crate::printer::config::Config::default().with_empty_line_before_list(false);
     let doc = crate::parser::parse_markdown(crate::parser::MarkdownParserState::default(), input)
         .unwrap();

@@ -22,15 +22,17 @@ impl<'a> ToDoc<'a> for Vec<&Block> {
     ) -> DocBuilder<'a, Arena<'a>, ()> {
         let mut acc = arena.nil();
         for (i, block) in self.iter().enumerate() {
-            if i == 1
-                && matches!(block, crate::ast::Block::List(_))
-                && !config.empty_line_before_list
-            {
-                // no extra empty line before parent list item and nested list
+            if i > 0 {
+                // first block should not have an empty line before it
                 acc = acc.append(arena.hardline());
-            } else if i > 0 {
-                // empty line between blocks
-                acc = acc.append(arena.hardline()).append(arena.hardline());
+                if matches!(block, Block::List(_)) {
+                    if config.empty_line_before_list {
+                        // empty line before list block
+                        acc = acc.append(arena.hardline());
+                    }
+                } else {
+                    acc = acc.append(arena.hardline());
+                }
             }
             acc = acc.append(block.to_doc(config.clone(), arena))
         }
@@ -38,7 +40,7 @@ impl<'a> ToDoc<'a> for Vec<&Block> {
     }
 }
 
-/// Block-level узлы
+/// Block-level nodes
 impl<'a> ToDoc<'a> for Block {
     fn to_doc(
         &self,
