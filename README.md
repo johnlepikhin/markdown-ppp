@@ -119,6 +119,9 @@ pub enum ElementBehavior<ELT> {
 
     /// Parse the element and apply a custom function to it.
     Map(ElementMapFn<ELT>),
+
+    /// Parse the element and apply a custom function to it which returns an array of elements.
+    FlatMap(ElementFlatMapFn<ELT>),
 }
 ```
 
