@@ -175,3 +175,56 @@ fn link_definition_mapped1() {
         }
     );
 }
+
+#[test]
+fn link_definition_mapped2() {
+    let config = MarkdownParserConfig::default().with_block_link_definition_behavior(
+        ElementBehavior::FlatMap(Rc::new(RefCell::new(Box::new(|block| {
+            if let Block::Definition(v) = block {
+                let mut label = vec![Inline::Text("mapped ".to_owned())];
+                label.extend(v.label);
+                let link1 = Block::Definition(LinkDefinition {
+                    label: label.clone(),
+                    destination: format!("mapped {}", v.destination),
+                    title: v.title.as_ref().map(|t| format!("mapped1 {}", t)),
+                });
+                let link2 = Block::Definition(LinkDefinition {
+                    label,
+                    destination: format!("mapped {}", v.destination),
+                    title: v.title.map(|t| format!("mapped2 {}", t)),
+                });
+                vec![link1, link2]
+            } else {
+                vec![block]
+            }
+        })))),
+    );
+    let doc = parse_markdown(
+        MarkdownParserState::with_config(config),
+        "[foo]: /url \"title\"",
+    )
+    .unwrap();
+    assert_eq!(
+        doc,
+        Document {
+            blocks: vec![
+                Block::Definition(LinkDefinition {
+                    label: vec![
+                        Inline::Text("mapped ".to_owned()),
+                        Inline::Text("foo".to_owned())
+                    ],
+                    destination: "mapped /url".to_owned(),
+                    title: Some("mapped1 title".to_owned())
+                }),
+                Block::Definition(LinkDefinition {
+                    label: vec![
+                        Inline::Text("mapped ".to_owned()),
+                        Inline::Text("foo".to_owned())
+                    ],
+                    destination: "mapped /url".to_owned(),
+                    title: Some("mapped2 title".to_owned())
+                }),
+            ]
+        }
+    );
+}

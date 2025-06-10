@@ -41,6 +41,8 @@ pub(crate) fn footnote_definition<'a>(
             .parse(&footnote_content)
             .map_err(|err| err.map_input(|_| input))?;
 
+        let blocks = blocks.into_iter().flatten().collect();
+
         let v = FootnoteDefinition {
             label: label.to_owned(),
             blocks,

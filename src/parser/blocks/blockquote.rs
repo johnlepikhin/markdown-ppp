@@ -23,6 +23,8 @@ pub(crate) fn blockquote<'a>(
             .parse(&inner)
             .map_err(|err| err.map_input(|_| input))?;
 
+        let inner = inner.into_iter().flatten().collect();
+
         Ok((input, inner))
     }
 }

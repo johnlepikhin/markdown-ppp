@@ -28,18 +28,26 @@ use super::util::conditional_inline;
 pub(crate) fn inline_many0<'a>(
     state: Rc<MarkdownParserState>,
 ) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<Inline>> {
-    move |input: &'a str| many0(inline(state.clone())).parse(input)
+    move |input: &'a str| {
+        let (input, list_of_lists) = many0(inline(state.clone())).parse(input)?;
+        let r: Vec<_> = list_of_lists.into_iter().flatten().collect();
+        Ok((input, r))
+    }
 }
 
 pub(crate) fn inline_many1<'a>(
     state: Rc<MarkdownParserState>,
 ) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<Inline>> {
-    move |input: &'a str| many1(inline(state.clone())).parse(input)
+    move |input: &'a str| {
+        let (input, list_of_lists) = many1(inline(state.clone())).parse(input)?;
+        let r: Vec<_> = list_of_lists.into_iter().flatten().collect();
+        Ok((input, r))
+    }
 }
 
 pub(crate) fn inline<'a>(
     state: Rc<MarkdownParserState>,
-) -> impl FnMut(&'a str) -> IResult<&'a str, Inline> {
+) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<Inline>> {
     move |input: &'a str| {
         alt((
             conditional_inline(
@@ -91,7 +99,7 @@ pub(crate) fn inline<'a>(
     }
 }
 
-fn custom_parser(state: Rc<MarkdownParserState>) -> impl FnMut(&str) -> IResult<&str, Inline> {
+fn custom_parser(state: Rc<MarkdownParserState>) -> impl FnMut(&str) -> IResult<&str, Vec<Inline>> {
     move |input: &str| {
         if let Some(custom_parser) = state.config.custom_inline_parser.as_ref() {
             let mut p = (**custom_parser).borrow_mut();

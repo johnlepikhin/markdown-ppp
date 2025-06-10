@@ -6,13 +6,16 @@ use std::rc::Rc;
 /// Function type for mapping elements.
 type ElementMapFn<ELT> = Rc<RefCell<Box<dyn FnMut(ELT) -> ELT>>>;
 
+/// Function type for mapping elements.
+type ElementFlatMapFn<ELT> = Rc<RefCell<Box<dyn FnMut(ELT) -> Vec<ELT>>>>;
+
 /// Function type for custom block parsers.
 type CustomBlockParserFn =
-    Rc<RefCell<Box<dyn for<'a> FnMut(&'a str) -> IResult<&'a str, crate::ast::Block>>>>;
+    Rc<RefCell<Box<dyn for<'a> FnMut(&'a str) -> IResult<&'a str, Vec<crate::ast::Block>>>>>;
 
 /// Function type for custom inline parsers.
 type CustomInlineParserFn =
-    Rc<RefCell<Box<dyn for<'a> FnMut(&'a str) -> IResult<&'a str, crate::ast::Inline>>>>;
+    Rc<RefCell<Box<dyn for<'a> FnMut(&'a str) -> IResult<&'a str, Vec<crate::ast::Inline>>>>>;
 
 /// Behavior of the parser when encountering certain elements.
 #[derive(Clone)]
@@ -29,6 +32,9 @@ pub enum ElementBehavior<ELT> {
 
     /// Parse the element and apply a custom function to it.
     Map(ElementMapFn<ELT>),
+
+    /// Parse the element and apply a custom function to it which returns an array of elements.
+    FlatMap(ElementFlatMapFn<ELT>),
 }
 
 /// A configuration for the Markdown parser.

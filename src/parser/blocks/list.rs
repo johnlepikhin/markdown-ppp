@@ -218,6 +218,9 @@ pub(crate) fn list_item(
         let (_, blocks) = many0(crate::parser::blocks::block(state.clone()))
             .parse(&item_content)
             .map_err(|err| err.map_input(|_| input))?;
+
+        let blocks = blocks.into_iter().flatten().collect();
+
         let item = ListItem {
             task: task_state,
             blocks,

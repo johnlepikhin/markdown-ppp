@@ -46,5 +46,7 @@ pub fn parse_markdown(
     );
     let (_, blocks) = parser.parse(input)?;
 
+    let blocks = blocks.into_iter().flatten().collect();
+
     Ok(Document { blocks })
 }

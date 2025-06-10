@@ -36,7 +36,9 @@ fn is_text<'a>(state: Rc<MarkdownParserState>) -> impl FnMut(&'a str) -> IResult
     move |input: &'a str| not(not_a_text(state.clone())).parse(input)
 }
 
-fn not_a_text<'a>(state: Rc<MarkdownParserState>) -> impl FnMut(&'a str) -> IResult<&'a str, ()> {
+fn not_a_text<'a>(
+    state: Rc<MarkdownParserState>,
+) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<()>> {
     move |input: &'a str| {
         alt((
             conditional_inline_unit(

@@ -9,7 +9,7 @@ fn custom_parser1() {
     use nom::Parser;
     let config = crate::parser::config::MarkdownParserConfig::default().with_custom_block_parser(
         Rc::new(RefCell::new(Box::new(|input: &str| {
-            value(Block::ThematicBreak, nom::bytes::complete::tag("///")).parse(input)
+            value(vec![Block::ThematicBreak], nom::bytes::complete::tag("///")).parse(input)
         }))),
     );
     let doc = parse_markdown(MarkdownParserState::with_config(config), "///\ntext\n===").unwrap();

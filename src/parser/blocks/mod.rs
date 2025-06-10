@@ -22,7 +22,7 @@ use std::rc::Rc;
 
 pub(crate) fn block<'a>(
     state: Rc<MarkdownParserState>,
-) -> impl FnMut(&'a str) -> IResult<&'a str, Block> {
+) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<Block>> {
     move |input: &'a str| {
         preceded(
             many_empty_lines0,
@@ -113,7 +113,7 @@ pub(crate) fn block<'a>(
 
 pub(crate) fn custom_parser(
     state: Rc<MarkdownParserState>,
-) -> impl FnMut(&str) -> IResult<&str, Block> {
+) -> impl FnMut(&str) -> IResult<&str, Vec<Block>> {
     move |input: &str| {
         if let Some(custom_parser) = state.config.custom_block_parser.as_ref() {
             let mut p = (**custom_parser).borrow_mut();
