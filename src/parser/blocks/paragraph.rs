@@ -85,7 +85,7 @@ pub(crate) fn is_paragraph_line_start<'a>(
                 state.config.block_code_block_behavior.clone(),
                 value(
                     (),
-                    crate::parser::blocks::code_block::code_block(state.clone()),
+                    crate::parser::blocks::code_block::code_block_fenced(state.clone()),
                 ),
             ),
             conditional_block_unit(

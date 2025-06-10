@@ -28,6 +28,13 @@ pub(crate) fn block<'a>(
             many_empty_lines0,
             alt((
                 conditional_block(
+                    state.config.block_code_block_behavior.clone(),
+                    map(
+                        crate::parser::blocks::code_block::code_block(state.clone()),
+                        Block::CodeBlock,
+                    ),
+                ),
+                conditional_block(
                     state.config.block_heading_v1_behavior.clone(),
                     map(
                         crate::parser::blocks::heading::heading_v1(state.clone()),
@@ -57,13 +64,6 @@ pub(crate) fn block<'a>(
                     map(
                         crate::parser::blocks::list::list(state.clone()),
                         Block::List,
-                    ),
-                ),
-                conditional_block(
-                    state.config.block_code_block_behavior.clone(),
-                    map(
-                        crate::parser::blocks::code_block::code_block(state.clone()),
-                        Block::CodeBlock,
                     ),
                 ),
                 conditional_block(

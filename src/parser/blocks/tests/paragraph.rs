@@ -83,3 +83,14 @@ fn multi_paragraph4() {
         }
     );
 }
+
+#[test]
+fn paragraph_with_indented_line1() {
+    let doc = parse_markdown(MarkdownParserState::default(), "a\n    b").unwrap();
+    assert_eq!(
+        doc,
+        Document {
+            blocks: vec![Block::Paragraph(vec![Inline::Text("a\n b".to_string())])],
+        }
+    );
+}
