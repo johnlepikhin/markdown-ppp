@@ -124,7 +124,7 @@ fn balanced_parens(input: &str) -> IResult<&str, String> {
             fold_many0(
                 alt((
                     map(escaped_char, |c| c.to_string()),
-                    map(balanced_parens, |s| format!("({})", s)),
+                    map(balanced_parens, |s| format!("({s})")),
                     map(satisfy(|c| is_valid_char(c) && c != '(' && c != ')'), |c| {
                         c.to_string()
                     }),

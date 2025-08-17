@@ -30,7 +30,7 @@ impl<'a> ToDoc<'a> for List {
                 ListKind::Bullet(ListBulletKind::Star) => "*".to_owned(),
                 ListKind::Bullet(ListBulletKind::Plus) => "+".to_owned(),
                 ListKind::Ordered(_) => {
-                    let r = format!("{}.", counter);
+                    let r = format!("{counter}.");
                     counter += 1;
                     r
                 }

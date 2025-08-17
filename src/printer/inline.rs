@@ -86,7 +86,7 @@ impl<'a> ToDocInline<'a> for Inline {
             }) => {
                 let title_part = title
                     .as_ref()
-                    .map(|t| format!(" \"{}\"", t))
+                    .map(|t| format!(" \"{t}\""))
                     .unwrap_or_default();
                 arena
                     .text("![")
@@ -96,8 +96,8 @@ impl<'a> ToDocInline<'a> for Inline {
                     .append(arena.text(title_part))
                     .append(arena.text(")"))
             }
-            Inline::Autolink(link) => arena.text(format!("<{}>", link)),
-            Inline::FootnoteReference(label) => arena.text(format!("[^{}]", label)),
+            Inline::Autolink(link) => arena.text(format!("<{link}>")),
+            Inline::FootnoteReference(label) => arena.text(format!("[^{label}]")),
             Inline::Empty => arena.nil(),
             Inline::LinkReference(v) => {
                 if v.label == v.text {

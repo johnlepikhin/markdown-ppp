@@ -72,7 +72,7 @@ impl<'a> ToDoc<'a> for List {
             ListKind::Ordered(ListOrderedKindOptions { start }) => tag(
                 state,
                 "ol",
-                vec![("start".to_owned(), format!("{}", start))],
+                vec![("start".to_owned(), format!("{start}"))],
                 items,
             ),
             ListKind::Bullet(kind) => {
@@ -169,7 +169,7 @@ fn table_row_to_doc<'a>(
             Some(Alignment::Center) => "center",
             None => "left",
         };
-        let alignment_class = format!("markdown-table-align-{}", alignment);
+        let alignment_class = format!("markdown-table-align-{alignment}");
         let attributes = vec![("class".to_owned(), alignment_class.to_owned())];
         acc = acc.append(tag(state, row_tag, attributes, cell.to_doc(state)));
     }

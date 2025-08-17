@@ -60,7 +60,7 @@ impl<'a> ToDoc<'a> for Block {
                     CodeBlockKind::Fenced { info } => {
                         let info = info.as_deref().unwrap_or("");
                         arena
-                            .text(format!("```{}\n", info))
+                            .text(format!("```{info}\n"))
                             .append(arena.text(literal.clone()))
                             .append(arena.text("\n```"))
                     }
@@ -68,7 +68,7 @@ impl<'a> ToDoc<'a> for Block {
                         // каждый строка с отступом 4 пробела
                         let indented = literal
                             .lines()
-                            .map(|l| format!("    {}", l))
+                            .map(|l| format!("    {l}"))
                             .collect::<Vec<_>>()
                             .join("\n");
                         arena.text(indented)
@@ -85,7 +85,7 @@ impl<'a> ToDoc<'a> for Block {
                     def.destination,
                     def.title
                         .as_ref()
-                        .map(|t| format!(" \"{}\"", t))
+                        .map(|t| format!(" \"{t}\""))
                         .unwrap_or_default()
                 ))),
 

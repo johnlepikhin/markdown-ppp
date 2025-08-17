@@ -69,7 +69,7 @@ impl<'a> ToDoc<'a> for Inline {
                             escape(&format!("#{}{}", state.config.anchor_prefix, index)),
                         ),
                     ],
-                    state.arena.text(format!("[{}]", index)),
+                    state.arena.text(format!("[{index}]")),
                 )
             }
             Inline::Empty => state.arena.nil(),
