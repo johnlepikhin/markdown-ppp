@@ -59,3 +59,61 @@ fn emphasis4() {
         }
     );
 }
+
+#[test]
+#[ignore = "Known issue: underscores in words like PKG_CONFIG_PATH can be incorrectly parsed as emphasis"]
+fn emphasis_with_underscores_in_words() {
+    // Test case: PKG_CONFIG_PATH should not be parsed as PKG*CONFIG_PATH
+    let doc = parse_markdown(
+        MarkdownParserState::default(),
+        "Note that we set PKG_CONFIG_PATH only if it's not _already_ set",
+    )
+    .unwrap();
+
+    // Debug output
+    println!("Parsed document: {:?}", doc);
+
+    // Expected: _already_ should be emphasized, PKG_CONFIG_PATH should remain as is
+    assert_eq!(
+        doc,
+        Document {
+            blocks: vec![Block::Paragraph(vec![
+                Inline::Text("Note that we set PKG_CONFIG_PATH only if it's not ".to_string()),
+                Inline::Emphasis(vec![Inline::Text("already".to_string())]),
+                Inline::Text(" set".to_string())
+            ])],
+        }
+    );
+}
+
+#[test]
+fn test_simple_underscore() {
+    let doc = parse_markdown(MarkdownParserState::default(), "_already_").unwrap();
+
+    println!("Simple underscore: {:?}", doc);
+
+    assert_eq!(
+        doc,
+        Document {
+            blocks: vec![Block::Paragraph(vec![Inline::Emphasis(vec![
+                Inline::Text("already".to_string())
+            ])])],
+        }
+    );
+}
+
+#[test]
+fn test_pkg_config() {
+    let doc = parse_markdown(MarkdownParserState::default(), "PKG_CONFIG_PATH").unwrap();
+
+    println!("PKG_CONFIG_PATH: {:?}", doc);
+
+    assert_eq!(
+        doc,
+        Document {
+            blocks: vec![Block::Paragraph(vec![Inline::Text(
+                "PKG_CONFIG_PATH".to_string()
+            )])],
+        }
+    );
+}
