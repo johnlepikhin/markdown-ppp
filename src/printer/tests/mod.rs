@@ -135,6 +135,150 @@ let s = "hello\n";
         case(
             r#"Autolinks test: <http://example.com> and <johnlepikhin@gmail.com>"#),
 
+        // GitHub Alert tests
+        case(
+            r#"> [!NOTE]
+> This is a note"#),
+
+        case(
+            r#"> [!TIP]
+> Here's a helpful tip with **bold** and *italic* text"#),
+
+        case(
+            r#"> [!IMPORTANT]
+> This is important information
+> 
+> With multiple paragraphs"#),
+
+        case(
+            r#"> [!WARNING]
+> Warning with a list:
+> 
+>  - First item
+>  - Second item
+>  - Third item"#),
+
+        case(
+            r#"> [!CAUTION]
+> Caution alert with `inline code` and [a link](https://example.com)"#),
+
+        // Edge case: Empty alert
+        case(
+            r#"> [!NOTE]"#),
+
+        // Edge case: Alert with nested blockquote
+        case(
+            r#"> [!TIP]
+> This contains a nested quote:
+> 
+> > Nested quote inside alert
+> > 
+> > Second line of nested quote"#),
+
+        // Edge case: Alert with code block
+        case(
+            r#"> [!WARNING]
+> Here's some code:
+> 
+> ```python
+> def hello():
+>     print("Hello, world!")
+> ```
+> 
+> Be careful!"#),
+
+        // Edge case: Multiple alerts in sequence
+        case(
+            r#"> [!NOTE]
+> First alert
+
+> [!TIP]
+> Second alert"#),
+
+        // Edge case: Alert with table
+        case(
+            r#"> [!IMPORTANT]
+> Here's a table:
+> 
+> | Column 1 | Column 2 |
+> | -------- | -------- |
+> | Cell 1   | Cell 2   |"#),
+
+        // Edge case: Alert with footnote
+        case(
+            r#"> [!CAUTION]
+> Text with footnote[^1]
+
+[^1]: This is the footnote"#),
+
+        // Edge case: Alert with task list
+        // Note: Current printer uses [X] for completed tasks - this is expected behavior
+        case(
+            r#"> [!TIP]
+> Task list:
+> 
+>  - [X] Completed task
+>  - [ ] Incomplete task
+>  - [ ] Another task"#),
+
+        // Edge case: Alert with horizontal rule
+        case(
+            r#"> [!NOTE]
+> Before rule
+> 
+> ---
+> 
+> After rule"#),
+
+        // Edge case: Alert with escaped content
+        case(
+            r#"> [!WARNING]
+> This has \*escaped\* content and \[brackets\]"#),
+
+        // Edge case: Alert with HTML entity
+        // Note: Parser converts &copy; to © symbol
+        case(
+            r#"> [!IMPORTANT]
+> Copyright © 2024"#),
+
+        // Edge case: Alert with autolink
+        case(
+            r#"> [!CAUTION]
+> Visit <https://example.com> for more info"#),
+
+        // Edge case: Alert with strikethrough
+        case(
+            r#"> [!TIP]
+> This is ~~deprecated~~ text"#),
+
+        // Edge case: Alert with image
+        case(
+            r#"> [!NOTE]
+> ![Alt text](image.png "Image title")"#),
+
+        // Edge case: Alert with reference link
+        case(
+            r#"> [!WARNING]
+> See [this link][ref] for details
+
+[ref]: https://example.com"#),
+
+        // Edge case: Alert with complex mixed content
+        case(
+            r#"> [!IMPORTANT]
+> # Heading inside alert
+> 
+> This has **bold**, *italic*, `code`, and ~~strikethrough~~.
+> 
+>  - List item 1
+>  - List item 2
+> 
+> ```js
+> console.log("code block");
+> ```
+> 
+> End of alert"#),
+
 )]
 fn symmetric_round_trip(input: &str) {
     let config = crate::printer::config::Config::default();

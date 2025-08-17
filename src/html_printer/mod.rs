@@ -1,5 +1,6 @@
 mod block;
 pub mod config;
+mod github_alert;
 mod index;
 mod inline;
 mod tests;

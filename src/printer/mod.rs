@@ -1,6 +1,7 @@
 mod block;
 mod blockquote;
 pub mod config;
+mod github_alert;
 mod heading;
 mod inline;
 mod list;

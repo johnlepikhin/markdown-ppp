@@ -16,6 +16,7 @@ It provides a clean, well-structured Abstract Syntax Tree (AST) for parsed docum
 - **Markdown Parsing** — Full Markdown parsing support with strict AST structure.
 - **Pretty-printing and processing** — Build, modify, and reformat Markdown easily.
 - **Render to HTML** — Convert Markdown AST to HTML.
+- **GitHub Alerts** — Native support for GitHub-style markdown alerts ([!NOTE], [!TIP], [!WARNING], etc.).
 - **Modular design** — You can disable parsing entirely and use only the AST types.
 
 ---
@@ -292,6 +293,7 @@ cargo add markdown-ppp --no-default-features --features parser
 
 - [API Docs on docs.rs](https://docs.rs/markdown-ppp)
 - [AI-generated documentation](https://deepwiki.com/johnlepikhin/markdown-ppp)
+- [GitHub Alerts Usage](docs/github_alerts.md)
 
 ---
 

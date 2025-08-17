@@ -84,6 +84,11 @@ fn get_block_indicies(index: &mut Index, block: &Block) {
             }
         }
         Block::Empty => (),
+        Block::GitHubAlert(alert) => {
+            for block in &alert.blocks {
+                get_block_indicies(index, block);
+            }
+        }
     }
 }
 

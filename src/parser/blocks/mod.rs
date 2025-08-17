@@ -1,6 +1,7 @@
 mod blockquote;
 mod code_block;
 mod footnote_definition;
+mod github_alert;
 mod heading;
 mod html_block;
 mod link_definition;
@@ -51,6 +52,11 @@ pub(crate) fn block<'a>(
                         crate::parser::blocks::thematic_break::thematic_break(state.clone()),
                         |()| Block::ThematicBreak,
                     ),
+                ),
+                // GitHub alerts should be checked before regular blockquotes
+                conditional_block_vec(
+                    state.config.block_github_alert_behavior.clone(),
+                    crate::parser::blocks::github_alert::github_alert(state.clone()),
                 ),
                 conditional_block(
                     state.config.block_blockquote_behavior.clone(),

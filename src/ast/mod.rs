@@ -14,6 +14,9 @@
 //!                     └─ ...
 //! ```
 
+mod github_alerts;
+pub use github_alerts::{GitHubAlert, GitHubAlertType};
+
 // ——————————————————————————————————————————————————————————————————————————
 // Document root
 // ——————————————————————————————————————————————————————————————————————————
@@ -63,6 +66,9 @@ pub enum Block {
 
     /// Footnote definition
     FootnoteDefinition(FootnoteDefinition),
+
+    /// GitHub alert block (NOTE, TIP, IMPORTANT, WARNING, CAUTION)
+    GitHubAlert(GitHubAlert),
 
     /// Empty block. This is used to represent skipped blocks in the AST.
     Empty,

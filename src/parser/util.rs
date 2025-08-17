@@ -147,3 +147,31 @@ where
         conditional(behavior.clone(), vec![Inline::Empty], inner1).parse(input)
     }
 }
+
+pub(crate) fn conditional_block_vec<'a, P>(
+    behavior: crate::parser::config::ElementBehavior<Block>,
+    mut inner: P,
+) -> impl Parser<&'a str, Output = Vec<Block>, Error = nom::error::Error<&'a str>>
+where
+    P: Parser<&'a str, Output = Vec<Block>, Error = nom::error::Error<&'a str>>,
+{
+    move |input: &'a str| {
+        let mut inner1 = |s: &'a str| inner.parse(s);
+        match &behavior {
+            crate::parser::config::ElementBehavior::Ignore => fail().parse(input),
+            crate::parser::config::ElementBehavior::Parse => inner1(input),
+            crate::parser::config::ElementBehavior::Skip => {
+                let (remaining, _) = inner1(input)?;
+                Ok((remaining, vec![Block::Empty]))
+            }
+            crate::parser::config::ElementBehavior::Map(_) => {
+                // Map behavior doesn't make sense for Vec<Block>, just parse normally
+                inner1(input)
+            }
+            crate::parser::config::ElementBehavior::FlatMap(_) => {
+                // FlatMap behavior doesn't make sense for Vec<Block>, just parse normally
+                inner1(input)
+            }
+        }
+    }
+}

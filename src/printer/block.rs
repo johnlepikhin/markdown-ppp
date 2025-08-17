@@ -94,6 +94,9 @@ impl<'a> ToDoc<'a> for Block {
             Block::FootnoteDefinition(def) => arena
                 .text(format!("[^{}]: ", def.label))
                 .append(def.blocks.to_doc(config, arena)),
+            Block::GitHubAlert(alert) => {
+                crate::printer::github_alert::github_alert_to_doc(alert, config, arena)
+            }
         }
     }
 }

@@ -49,6 +49,9 @@ pub struct MarkdownParserConfig {
     /// The behavior of the parser when encountering blockquotes.
     pub(crate) block_blockquote_behavior: ElementBehavior<crate::ast::Block>,
 
+    /// The behavior of the parser when encountering GitHub alerts.
+    pub(crate) block_github_alert_behavior: ElementBehavior<crate::ast::Block>,
+
     /// The behavior of the parser when encountering headings in style 1 (e.g., `# Heading`).
     pub(crate) block_heading_v1_behavior: ElementBehavior<crate::ast::Block>,
 
@@ -122,6 +125,7 @@ impl Default for MarkdownParserConfig {
             allow_no_space_in_headings: false,
             html_entities_map: Self::make_html_entities_map(),
             block_blockquote_behavior: ElementBehavior::Parse,
+            block_github_alert_behavior: ElementBehavior::Parse,
             block_heading_v1_behavior: ElementBehavior::Parse,
             block_heading_v2_behavior: ElementBehavior::Parse,
             block_thematic_break_behavior: ElementBehavior::Parse,
@@ -183,6 +187,17 @@ impl MarkdownParserConfig {
     ) -> Self {
         Self {
             block_blockquote_behavior: behavior,
+            ..self
+        }
+    }
+
+    /// Set the behavior of the parser when encountering GitHub alerts.
+    pub fn with_block_github_alert_behavior(
+        self,
+        behavior: ElementBehavior<crate::ast::Block>,
+    ) -> Self {
+        Self {
+            block_github_alert_behavior: behavior,
             ..self
         }
     }

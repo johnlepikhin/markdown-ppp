@@ -2,6 +2,7 @@ mod blockquote;
 mod code_block;
 mod custom_parser;
 mod footnote_definition;
+mod github_alert;
 mod heading;
 mod html_block;
 mod link_definition;

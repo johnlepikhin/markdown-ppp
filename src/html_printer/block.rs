@@ -58,6 +58,7 @@ impl<'a> ToDoc<'a> for Block {
             Block::Empty => state.arena.nil(),
             Block::Table(v) => v.to_doc(state),
             Block::FootnoteDefinition(def) => def.to_doc(state),
+            Block::GitHubAlert(alert) => alert.to_doc(state),
         }
     }
 }
