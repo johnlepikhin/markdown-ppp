@@ -346,7 +346,7 @@ pub struct Image {
     pub title: Option<String>,
 
     /// Alternative text.
-    pub alt: String,
+    pub alt: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
