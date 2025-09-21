@@ -50,12 +50,8 @@ pub(crate) fn github_alert<'a>(
             many1(preceded(prefix, line_terminated(not_eof_or_eol0))).parse(input)?;
 
         // Remove the first line (alert marker) and join the rest
-        lines[0] = ""; // Clear the alert marker line
-        let inner = lines
-            .into_iter()
-            .filter(|line| !line.is_empty())
-            .collect::<Vec<_>>()
-            .join("\n");
+        lines.remove(0); // Remove the alert marker line completely
+        let inner = lines.join("\n");
 
         // Parse the inner content as blocks
         let (_, blocks) = if !inner.is_empty() {

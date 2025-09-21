@@ -45,4 +45,3 @@ fn is_likely_env_var(s: &str) -> bool {
 
     true
 }
-

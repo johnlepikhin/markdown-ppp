@@ -32,7 +32,14 @@ pub(crate) fn github_alert_to_doc<'a>(
         let content_string = content_doc.pretty(80).to_string();
 
         for line in content_string.lines() {
-            lines.push(format!("> {line}"));
+            if line.is_empty() {
+                lines.push(">".to_string());
+            } else if line.chars().all(|c| c.is_whitespace()) {
+                // Line contains only whitespace - convert to empty blockquote line
+                lines.push(">".to_string());
+            } else {
+                lines.push(format!("> {line}"));
+            }
         }
     }
 

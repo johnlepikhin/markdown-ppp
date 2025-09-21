@@ -108,7 +108,7 @@ fn parse_table_row<'a>(
             delimited(
                 char('|'),
                 separated_list1(char('|'), cell_content(state.clone())),
-                char('|'),
+                opt(char('|')),
             ),
         ))
         .parse(input)

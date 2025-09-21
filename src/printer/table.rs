@@ -28,7 +28,12 @@ impl<'a> ToDoc<'a> for Table {
         let mut rows = vec![header, separator];
         rows.extend(body);
 
-        arena.intersperse(rows, arena.hardline())
+        // Render table with unlimited width to prevent line wrapping
+        let table_doc = arena.intersperse(rows, arena.hardline());
+        let mut buf = Vec::new();
+        table_doc.render(usize::MAX, &mut buf).unwrap();
+        let table_string = String::from_utf8(buf).unwrap();
+        arena.text(table_string)
     }
 }
 

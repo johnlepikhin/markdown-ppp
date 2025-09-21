@@ -2,6 +2,7 @@
 use rstest::rstest;
 
 mod list;
+mod table;
 mod text_formatting;
 
 #[rstest(input,
@@ -148,13 +149,13 @@ let s = "hello\n";
         case(
             r#"> [!IMPORTANT]
 > This is important information
-> 
+>
 > With multiple paragraphs"#),
 
         case(
             r#"> [!WARNING]
 > Warning with a list:
-> 
+>
 >  - First item
 >  - Second item
 >  - Third item"#),
@@ -171,7 +172,7 @@ let s = "hello\n";
         case(
             r#"> [!TIP]
 > This contains a nested quote:
-> 
+>
 > > Nested quote inside alert
 > > 
 > > Second line of nested quote"#),
@@ -180,12 +181,12 @@ let s = "hello\n";
         case(
             r#"> [!WARNING]
 > Here's some code:
-> 
+>
 > ```python
 > def hello():
 >     print("Hello, world!")
 > ```
-> 
+>
 > Be careful!"#),
 
         // Edge case: Multiple alerts in sequence
@@ -200,7 +201,7 @@ let s = "hello\n";
         case(
             r#"> [!IMPORTANT]
 > Here's a table:
-> 
+>
 > | Column 1 | Column 2 |
 > | -------- | -------- |
 > | Cell 1   | Cell 2   |"#),
@@ -217,7 +218,7 @@ let s = "hello\n";
         case(
             r#"> [!TIP]
 > Task list:
-> 
+>
 >  - [X] Completed task
 >  - [ ] Incomplete task
 >  - [ ] Another task"#),
@@ -226,9 +227,9 @@ let s = "hello\n";
         case(
             r#"> [!NOTE]
 > Before rule
-> 
+>
 > ---
-> 
+>
 > After rule"#),
 
         // Edge case: Alert with escaped content
@@ -268,17 +269,46 @@ let s = "hello\n";
         case(
             r#"> [!IMPORTANT]
 > # Heading inside alert
-> 
+>
 > This has **bold**, *italic*, `code`, and ~~strikethrough~~.
-> 
+>
 >  - List item 1
 >  - List item 2
-> 
+>
 > ```js
 > console.log("code block");
 > ```
-> 
+>
 > End of alert"#),
+
+        // Table tests with line wrapping issues
+        case(
+            r#"| Very long header that would normally wrap on narrow displays             | Another extremely long header that tests table rendering |
+| ------------------------------------------------------------------------ | -------------------------------------------------------- |
+| Very long cell content that should not wrap regardless of width settings | Another long cell with extensive content                 |"#),
+
+        case(
+            r#"| Участок                                     | Протяженность                        | Крутизна | Характер рельефа   | Кат. сл. | Кол-во Крючьев / закладок |
+| ------------------------------------------- | ------------------------------------ | -------- | ------------------ | -------- | ------------------------- |
+| R0 — начало маршрута — цирк балки Гнилая    | Удобное место для организации связок | Empty    | Empty              | Empty    | Empty                     |
+| R0–R1 — Подъем на перемычку (пер. Липецкий) | 250 м                                | 30–35°   | Снег, летом — фирн | 2–       | Кр. — 0/0, Закл. — 0/0    |"#),
+
+        case(
+            r#"| Header with content | Another header |
+| ------------------- | -------------- |
+| Cell content        | Normal cell    |"#),
+
+        case(
+            r#"| Short | Very very very very very very very very very very very long content that definitely exceeds any reasonable line width limit |
+| ----- | --------------------------------------------------------------------------------------------------------------------------- |
+| A     | Another extremely long cell that tests the table width handling capabilities of the markdown parser and printer combination |
+| B     | Yet another cell with extensive content to verify that tables preserve their structure regardless of content length         |"#),
+
+        case(
+            r#"| Column 1 | Column 2 | Column 3 | Column 4 | Column 5 | Column 6 | Column 7 | Column 8 |
+| -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- |
+| Data 1   | Data 2   | Data 3   | Data 4   | Data 5   | Data 6   | Data 7   | Data 8   |
+| More 1   | More 2   | More 3   | More 4   | More 5   | More 6   | More 7   | More 8   |"#),
 
 )]
 fn symmetric_round_trip(input: &str) {
