@@ -1,6 +1,7 @@
 mod autolink;
 mod code_span;
 mod emphasis;
+mod environment_variable;
 mod footnote_reference;
 mod hard_newline;
 mod html_entity;
