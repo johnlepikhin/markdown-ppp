@@ -5,7 +5,7 @@ use crate::{
     parser::link_util::link_destination,
 };
 use nom::{
-    bytes::complete::take_while1,
+    bytes::complete::take_while,
     character::complete::{char, multispace0},
     combinator::opt,
     sequence::{delimited, preceded},
@@ -20,7 +20,7 @@ pub(crate) fn image<'a>(
     move |input: &'a str| {
         let (input, alt) = preceded(
             char('!'),
-            delimited(char('['), take_while1(|c| c != ']'), char(']')),
+            delimited(char('['), take_while(|c| c != ']'), char(']')),
         )
         .parse(input)?;
 

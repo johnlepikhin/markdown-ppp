@@ -45,3 +45,18 @@ fn image3() {
         }
     );
 }
+
+#[test]
+fn image4() {
+    let doc = parse_markdown(MarkdownParserState::default(), "![](train.jpg)").unwrap();
+    assert_eq!(
+        doc,
+        Document {
+            blocks: vec![Block::Paragraph(vec![Inline::Image(Image {
+                destination: "train.jpg".to_owned(),
+                title: None,
+                alt: "".to_owned(),
+            })])]
+        }
+    );
+}
