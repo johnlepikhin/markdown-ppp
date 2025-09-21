@@ -41,60 +41,74 @@ fn not_a_text<'a>(
 ) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<()>> {
     move |input: &'a str| {
         alt((
-            conditional_inline_unit(
-                state.config.inline_autolink_behavior.clone(),
-                value((), crate::parser::inline::autolink::autolink),
-            ),
-            conditional_inline_unit(
-                state.config.inline_reference_link_behavior.clone(),
+            alt((
+                conditional_inline_unit(
+                    state.config.inline_autolink_behavior.clone(),
+                    value((), crate::parser::inline::autolink::autolink),
+                ),
+                conditional_inline_unit(
+                    state.config.inline_reference_link_behavior.clone(),
+                    value(
+                        (),
+                        crate::parser::inline::reference_link::reference_link(state.clone()),
+                    ),
+                ),
+                conditional_inline_unit(
+                    state.config.inline_hard_newline_behavior.clone(),
+                    value((), crate::parser::inline::hard_newline::hard_newline),
+                ),
+                conditional_inline_unit(
+                    state.config.inline_text_behavior.clone(),
+                    value(
+                        (),
+                        crate::parser::inline::html_entity::html_entity(state.clone()),
+                    ),
+                ),
+                conditional_inline_unit(
+                    state.config.inline_image_behavior.clone(),
+                    value((), crate::parser::inline::image::image(state.clone())),
+                ),
+            )),
+            alt((
+                conditional_inline_unit(
+                    state.config.inline_link_behavior.clone(),
+                    value(
+                        (),
+                        crate::parser::inline::inline_link::inline_link(state.clone()),
+                    ),
+                ),
+                conditional_inline_unit(
+                    state.config.inline_code_span_behavior.clone(),
+                    value((), crate::parser::inline::code_span::code_span),
+                ),
+                conditional_inline_unit(
+                    state.config.inline_emphasis_behavior.clone(),
+                    value((), crate::parser::inline::emphasis::emphasis(state.clone())),
+                ),
+                conditional_inline_unit(
+                    state.config.inline_footnote_reference_behavior.clone(),
+                    value(
+                        (),
+                        crate::parser::inline::footnote_reference::footnote_reference,
+                    ),
+                ),
+                conditional_inline_unit(
+                    state.config.inline_strikethrough_behavior.clone(),
+                    value(
+                        (),
+                        crate::parser::inline::strikethrough::strikethrough(state.clone()),
+                    ),
+                ),
+            )),
+            map(
                 value(
                     (),
-                    crate::parser::inline::reference_link::reference_link(state.clone()),
+                    map(
+                        crate::parser::inline::environment_variable::environment_variable,
+                        |_| (),
+                    ),
                 ),
-            ),
-            conditional_inline_unit(
-                state.config.inline_hard_newline_behavior.clone(),
-                value((), crate::parser::inline::hard_newline::hard_newline),
-            ),
-            conditional_inline_unit(
-                state.config.inline_text_behavior.clone(),
-                value(
-                    (),
-                    crate::parser::inline::html_entity::html_entity(state.clone()),
-                ),
-            ),
-            conditional_inline_unit(
-                state.config.inline_image_behavior.clone(),
-                value((), crate::parser::inline::image::image(state.clone())),
-            ),
-            conditional_inline_unit(
-                state.config.inline_link_behavior.clone(),
-                value(
-                    (),
-                    crate::parser::inline::inline_link::inline_link(state.clone()),
-                ),
-            ),
-            conditional_inline_unit(
-                state.config.inline_code_span_behavior.clone(),
-                value((), crate::parser::inline::code_span::code_span),
-            ),
-            conditional_inline_unit(
-                state.config.inline_emphasis_behavior.clone(),
-                value((), crate::parser::inline::emphasis::emphasis(state.clone())),
-            ),
-            conditional_inline_unit(
-                state.config.inline_footnote_reference_behavior.clone(),
-                value(
-                    (),
-                    crate::parser::inline::footnote_reference::footnote_reference,
-                ),
-            ),
-            conditional_inline_unit(
-                state.config.inline_strikethrough_behavior.clone(),
-                value(
-                    (),
-                    crate::parser::inline::strikethrough::strikethrough(state.clone()),
-                ),
+                |_| vec![()],
             ),
         ))
         .parse(input)

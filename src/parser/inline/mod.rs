@@ -1,6 +1,7 @@
 mod autolink;
 mod code_span;
 mod emphasis;
+mod environment_variable;
 mod footnote_reference;
 mod hard_newline;
 mod html_entity;
@@ -80,6 +81,10 @@ pub(crate) fn inline<'a>(
             conditional_inline(
                 state.config.inline_code_span_behavior.clone(),
                 map(crate::parser::inline::code_span::code_span, Inline::Code),
+            ),
+            map(
+                crate::parser::inline::environment_variable::environment_variable,
+                |env_var| vec![env_var],
             ),
             conditional_inline(
                 state.config.inline_emphasis_behavior.clone(),
