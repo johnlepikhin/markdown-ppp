@@ -31,7 +31,8 @@ impl<'a> ToDocInline<'a> for Inline {
     ) -> DocBuilder<'a, Arena<'a>, ()> {
         match self {
             Inline::Text(t) => {
-                let words_or_spaces: Vec<_> = split_with_spaces(t);
+                let t = t.replace('\n', " ");
+                let words_or_spaces: Vec<_> = split_with_spaces(&t);
                 let separator = if allow_newlines {
                     arena.softline()
                 } else {

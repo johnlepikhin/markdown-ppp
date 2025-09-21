@@ -2,6 +2,7 @@
 use rstest::rstest;
 
 mod list;
+mod text_formatting;
 
 #[rstest(input,
          case("---"),
