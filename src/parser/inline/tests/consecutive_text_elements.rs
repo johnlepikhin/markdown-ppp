@@ -10,10 +10,7 @@ use crate::parser::{parse_markdown, MarkdownParserState};
 fn assert_no_consecutive_text_elements(inlines: &[Inline]) {
     for window in inlines.windows(2) {
         if let [Inline::Text(_), Inline::Text(_)] = window {
-            panic!(
-                "Found consecutive Text elements in {:?}, which should be merged",
-                inlines
-            );
+            panic!("Found consecutive Text elements in {inlines:?}, which should be merged");
         }
     }
 

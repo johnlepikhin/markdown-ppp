@@ -70,7 +70,7 @@ fn emphasis_with_underscores_in_words() {
     .unwrap();
 
     // Debug output
-    println!("Parsed document: {:?}", doc);
+    println!("Parsed document: {doc:?}");
 
     // Expected: _already_ should be emphasized, PKG_CONFIG_PATH should be merged with surrounding text
     assert_eq!(
@@ -89,7 +89,7 @@ fn emphasis_with_underscores_in_words() {
 fn test_simple_underscore() {
     let doc = parse_markdown(MarkdownParserState::default(), "_already_").unwrap();
 
-    println!("Simple underscore: {:?}", doc);
+    println!("Simple underscore: {doc:?}");
 
     assert_eq!(
         doc,
@@ -105,7 +105,7 @@ fn test_simple_underscore() {
 fn test_pkg_config() {
     let doc = parse_markdown(MarkdownParserState::default(), "PKG_CONFIG_PATH").unwrap();
 
-    println!("PKG_CONFIG_PATH: {:?}", doc);
+    println!("PKG_CONFIG_PATH: {doc:?}");
 
     assert_eq!(
         doc,

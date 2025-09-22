@@ -42,7 +42,7 @@ fn test_transform_text() {
 #[test]
 fn test_transform_image_urls() {
     let doc = create_test_doc();
-    let result = doc.transform_image_urls(|url| format!("https://cdn.example.com{}", url));
+    let result = doc.transform_image_urls(|url| format!("https://cdn.example.com{url}"));
 
     // Check that image URL was transformed
     if let Block::Paragraph(inlines) = &result.blocks[1] {
@@ -115,7 +115,7 @@ fn test_transform_code() {
         ])],
     };
 
-    let result = doc.transform_code(|code| format!("`{}`", code));
+    let result = doc.transform_code(|code| format!("`{code}`"));
 
     // Check paragraph code spans
     if let Block::Paragraph(inlines) = &result.blocks[0] {
@@ -138,7 +138,7 @@ fn test_transform_html() {
         ],
     };
 
-    let result = doc.transform_html(|html| format!("<!-- Processed -->{}", html));
+    let result = doc.transform_html(|html| format!("<!-- Processed -->{html}"));
 
     // Check inline HTML in paragraphs
     if let Block::Paragraph(inlines) = &result.blocks[0] {

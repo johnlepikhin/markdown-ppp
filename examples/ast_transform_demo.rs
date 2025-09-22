@@ -22,7 +22,7 @@ More text with ENV_VAR and OTHER_VAR variables.
 "#;
 
     println!("=== Original Markdown ===");
-    println!("{}", markdown_input);
+    println!("{markdown_input}");
 
     // Parse markdown into AST
     let doc = parse_markdown(MarkdownParserState::default(), markdown_input).unwrap();
@@ -41,7 +41,7 @@ More text with ENV_VAR and OTHER_VAR variables.
     // Count autolinks
     let autolink_count =
         doc.count_inlines(|inline| matches!(inline, markdown_ppp::ast::Inline::Autolink(_)));
-    println!("Found {} autolinks", autolink_count);
+    println!("Found {autolink_count} autolinks");
 
     println!("\n=== Transformation Examples ===");
 
@@ -52,7 +52,7 @@ More text with ENV_VAR and OTHER_VAR variables.
     // Example 2: Make all image URLs absolute
     let _absolute_images_doc = doc.clone().transform_image_urls(|url| {
         if url.starts_with('/') {
-            format!("https://cdn.example.com{}", url)
+            format!("https://cdn.example.com{url}")
         } else {
             url
         }
@@ -70,13 +70,13 @@ More text with ENV_VAR and OTHER_VAR variables.
         .transform_text(|s| s.trim().to_string())
         .transform_image_urls(|url| {
             if url.starts_with('/') {
-                format!("https://cdn.example.com{}", url)
+                format!("https://cdn.example.com{url}")
             } else {
                 url
             }
         })
         .transform_link_urls(|url| url.replace("http://", "https://"))
-        .transform_code(|code| format!(">>> {} <<<", code))
+        .transform_code(|code| format!(">>> {code} <<<"))
         .normalize_whitespace()
         .apply(doc.clone());
 
@@ -87,10 +87,10 @@ More text with ENV_VAR and OTHER_VAR variables.
     let _conditional_doc = doc
         .clone()
         .transform_if(is_production, |d| {
-            d.transform_image_urls(|url| format!("https://production-cdn.com{}", url))
+            d.transform_image_urls(|url| format!("https://production-cdn.com{url}"))
         })
         .transform_if(!is_production, |d| {
-            d.transform_image_urls(|url| format!("https://dev-cdn.com{}", url))
+            d.transform_image_urls(|url| format!("https://dev-cdn.com{url}"))
         });
 
     println!("✓ Applied conditional transformations");
@@ -159,7 +159,7 @@ More text with ENV_VAR and OTHER_VAR variables.
     let _functional_doc = doc
         .clone()
         .pipe(|d| d.transform_text(|s| s.to_lowercase()))
-        .pipe(|d| d.transform_image_urls(|url| format!("optimized/{}", url)))
+        .pipe(|d| d.transform_image_urls(|url| format!("optimized/{url}")))
         .compose(|d| d.normalize_whitespace(), |d| d.remove_empty_text());
 
     println!("✓ Applied functional pipeline transformations");
@@ -170,7 +170,7 @@ More text with ENV_VAR and OTHER_VAR variables.
     let _chained_doc = doc
         .clone()
         .transform_text(|s| s.replace("Hello", "Hi"))
-        .transform_image_urls(|url| format!("/assets{}", url))
+        .transform_image_urls(|url| format!("/assets{url}"))
         .remove_empty_paragraphs();
 
     println!("✓ Applied transformations using method chaining");

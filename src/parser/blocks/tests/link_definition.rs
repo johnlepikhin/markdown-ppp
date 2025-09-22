@@ -149,7 +149,7 @@ fn link_definition_mapped1() {
                 Block::Definition(LinkDefinition {
                     label,
                     destination: format!("mapped {}", v.destination),
-                    title: v.title.map(|t| format!("mapped {}", t)),
+                    title: v.title.map(|t| format!("mapped {t}")),
                 })
             } else {
                 block
@@ -186,12 +186,12 @@ fn link_definition_mapped2() {
                 let link1 = Block::Definition(LinkDefinition {
                     label: label.clone(),
                     destination: format!("mapped {}", v.destination),
-                    title: v.title.as_ref().map(|t| format!("mapped1 {}", t)),
+                    title: v.title.as_ref().map(|t| format!("mapped1 {t}")),
                 });
                 let link2 = Block::Definition(LinkDefinition {
                     label,
                     destination: format!("mapped {}", v.destination),
-                    title: v.title.map(|t| format!("mapped2 {}", t)),
+                    title: v.title.map(|t| format!("mapped2 {t}")),
                 });
                 vec![link1, link2]
             } else {

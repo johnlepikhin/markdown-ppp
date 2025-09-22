@@ -43,7 +43,7 @@ fn basic_example() {
     };
 
     let latex = render_latex(&doc, Config::default());
-    println!("```latex\n{}\n```\n", latex);
+    println!("```latex\n{latex}\n```\n");
 }
 
 fn table_styles_example() {
@@ -76,10 +76,10 @@ fn table_styles_example() {
     ];
 
     for (style, description) in styles {
-        println!("### {}\n", description);
+        println!("### {description}\n");
         let config = Config::default().with_table_style(style);
         let latex = render_latex(&table_doc, config);
-        println!("```latex\n{}\n```\n", latex);
+        println!("```latex\n{latex}\n```\n");
     }
 }
 
@@ -102,10 +102,10 @@ fn code_block_styles_example() {
     ];
 
     for (style, description) in styles {
-        println!("### {}\n", description);
+        println!("### {description}\n");
         let config = Config::default().with_code_block_style(style);
         let latex = render_latex(&code_doc, config);
-        println!("```latex\n{}\n```\n", latex);
+        println!("```latex\n{latex}\n```\n");
     }
 }
 
@@ -179,7 +179,7 @@ fn complex_document_example() {
         .with_code_block_style(CodeBlockStyle::Listings);
 
     let latex = render_latex(&doc, config);
-    println!("```latex\n{}\n```\n", latex);
+    println!("```latex\n{latex}\n```\n");
 }
 
 fn escaping_example() {
@@ -206,5 +206,5 @@ fn escaping_example() {
     };
 
     let latex = render_latex(&doc, Config::default());
-    println!("```latex\n{}\n```\n", latex);
+    println!("```latex\n{latex}\n```\n");
 }

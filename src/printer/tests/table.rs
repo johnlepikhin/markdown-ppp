@@ -22,7 +22,7 @@ fn table_no_line_wrapping_with_small_width() {
 
     // Each line should be much longer than the width limit
     for line in &lines {
-        assert!(line.len() > 20, "Line should exceed width limit: {}", line);
+        assert!(line.len() > 20, "Line should exceed width limit: {line}");
     }
 
     // Verify no line breaks within table rows
@@ -48,12 +48,11 @@ fn table_preserves_structure_with_long_cells() {
 
     // Each line should preserve table structure (start with |, contain |, end with |)
     for line in &lines {
-        assert!(line.starts_with('|'), "Line should start with |: {}", line);
-        assert!(line.ends_with('|'), "Line should end with |: {}", line);
+        assert!(line.starts_with('|'), "Line should start with |: {line}");
+        assert!(line.ends_with('|'), "Line should end with |: {line}");
         assert!(
             line.matches('|').count() >= 3,
-            "Line should have at least 3 | characters: {}",
-            line
+            "Line should have at least 3 | characters: {line}"
         );
     }
 }
@@ -78,23 +77,18 @@ fn table_renders_with_different_widths() {
         assert_eq!(
             lines.len(),
             3,
-            "Should have 3 lines regardless of width {}",
-            width
+            "Should have 3 lines regardless of width {width}"
         );
 
         // Table structure should be preserved
         for line in &lines {
             assert!(
                 line.starts_with('|'),
-                "Width {}: Line should start with |: {}",
-                width,
-                line
+                "Width {width}: Line should start with |: {line}"
             );
             assert!(
                 line.ends_with('|'),
-                "Width {}: Line should end with |: {}",
-                width,
-                line
+                "Width {width}: Line should end with |: {line}"
             );
         }
     }
@@ -119,8 +113,8 @@ fn table_handles_newlines_in_cell_content() {
 
     // Verify table structure is preserved
     for line in &lines {
-        assert!(line.starts_with('|'), "Line should start with |: {}", line);
-        assert!(line.ends_with('|'), "Line should end with |: {}", line);
+        assert!(line.starts_with('|'), "Line should start with |: {line}");
+        assert!(line.ends_with('|'), "Line should end with |: {line}");
     }
 }
 
@@ -155,8 +149,8 @@ fn table_with_user_example_structure() {
 
     // Each line should preserve table structure
     for line in &lines {
-        assert!(line.starts_with('|'), "Line should start with |: {}", line);
-        assert!(line.ends_with('|'), "Line should end with |: {}", line);
+        assert!(line.starts_with('|'), "Line should start with |: {line}");
+        assert!(line.ends_with('|'), "Line should end with |: {line}");
     }
 
     // Check that long content doesn't wrap

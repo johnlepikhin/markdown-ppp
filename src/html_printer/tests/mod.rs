@@ -41,7 +41,7 @@ fn render_to_html(#[case] input: &str, #[case] expected: &str) {
     let config = crate::html_printer::config::Config::default();
     let ast = crate::parser::parse_markdown(crate::parser::MarkdownParserState::default(), input)
         .unwrap();
-    println!("{:?} => {:#?}", input, ast);
+    println!("{input:?} => {ast:#?}");
     let result = crate::html_printer::render_html(&ast, config);
     assert_eq!(expected, result);
 }

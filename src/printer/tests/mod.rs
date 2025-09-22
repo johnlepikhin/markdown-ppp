@@ -315,7 +315,7 @@ fn symmetric_round_trip(input: &str) {
     let config = crate::printer::config::Config::default();
     let doc = crate::parser::parse_markdown(crate::parser::MarkdownParserState::default(), input)
         .unwrap();
-    println!("{:?} => {:#?}", input, doc);
+    println!("{input:?} => {doc:#?}");
     let result = crate::printer::render_markdown(&doc, config);
     assert_eq!(input, result);
 }

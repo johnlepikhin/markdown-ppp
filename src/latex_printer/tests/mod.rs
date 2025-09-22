@@ -244,8 +244,8 @@ fn test_config_width() {
     let result_narrow = render_latex(&doc, config_narrow);
     let result_wide = render_latex(&doc, config_wide);
 
-    println!("Narrow (width=40):\n{}", result_narrow);
-    println!("Wide (width=120):\n{}", result_wide);
+    println!("Narrow (width=40):\n{result_narrow}");
+    println!("Wide (width=120):\n{result_wide}");
 
     // The narrow config should have more line breaks if width works
     // BUT this currently fails because Inline::Text doesn't respect width!
@@ -280,8 +280,8 @@ fn test_width_works_for_complex_content() {
     let result_narrow = render_latex(&doc, config_narrow);
     let result_wide = render_latex(&doc, config_wide);
 
-    println!("Complex narrow (width=30):\n{}", result_narrow);
-    println!("Complex wide (width=120):\n{}", result_wide);
+    println!("Complex narrow (width=30):\n{result_narrow}");
+    println!("Complex wide (width=120):\n{result_wide}");
 
     // This should work because pretty-printer handles complex structures
     // The issue is specifically with Inline::Text nodes
@@ -305,8 +305,8 @@ fn test_code_blocks_no_wrapping() {
     let result_narrow = render_latex(&doc, config_narrow);
     let result_wide = render_latex(&doc, config_wide);
 
-    println!("Code narrow (width=20):\n{}", result_narrow);
-    println!("Code wide (width=120):\n{}", result_wide);
+    println!("Code narrow (width=20):\n{result_narrow}");
+    println!("Code wide (width=120):\n{result_wide}");
 
     // Code should remain on same line in both cases (only text should wrap)
     let narrow_lines: Vec<&str> = result_narrow.lines().collect();

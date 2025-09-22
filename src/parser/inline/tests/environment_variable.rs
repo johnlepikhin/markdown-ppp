@@ -60,7 +60,7 @@ fn test_integration_with_full_parser() {
     use crate::parser::{parse_markdown, MarkdownParserState};
 
     let result = parse_markdown(MarkdownParserState::default(), "PKG_CONFIG_PATH").unwrap();
-    println!("Integration test result: {:?}", result);
+    println!("Integration test result: {result:?}");
 
     // Проверяем, что PKG_CONFIG_PATH парсится как один Text элемент
     if let crate::ast::Block::Paragraph(inlines) = &result.blocks[0] {

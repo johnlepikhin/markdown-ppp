@@ -71,7 +71,7 @@ struct SimpleTransformer;
 impl Transformer for SimpleTransformer {
     fn transform_inline(&mut self, inline: Inline) -> Inline {
         match inline {
-            Inline::Text(text) => Inline::Text(format!(">> {}", text)),
+            Inline::Text(text) => Inline::Text(format!(">> {text}")),
             other => self.walk_transform_inline(other),
         }
     }
