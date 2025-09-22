@@ -72,14 +72,12 @@ fn emphasis_with_underscores_in_words() {
     // Debug output
     println!("Parsed document: {:?}", doc);
 
-    // Expected: _already_ should be emphasized, PKG_CONFIG_PATH should remain as separate Text
+    // Expected: _already_ should be emphasized, PKG_CONFIG_PATH should be merged with surrounding text
     assert_eq!(
         doc,
         Document {
             blocks: vec![Block::Paragraph(vec![
-                Inline::Text("Note that we set ".to_string()),
-                Inline::Text("PKG_CONFIG_PATH".to_string()),
-                Inline::Text(" only if it's not ".to_string()),
+                Inline::Text("Note that we set PKG_CONFIG_PATH only if it's not ".to_string()),
                 Inline::Emphasis(vec![Inline::Text("already".to_string())]),
                 Inline::Text(" set".to_string())
             ])],
@@ -131,11 +129,7 @@ fn test_multiple_env_vars_with_emphasis() {
         doc,
         Document {
             blocks: vec![Block::Paragraph(vec![
-                Inline::Text("Set ".to_string()),
-                Inline::Text("PATH_TO_FILE".to_string()),
-                Inline::Text(" and ".to_string()),
-                Inline::Text("CMAKE_BUILD_TYPE".to_string()),
-                Inline::Text(" to ".to_string()),
+                Inline::Text("Set PATH_TO_FILE and CMAKE_BUILD_TYPE to ".to_string()),
                 Inline::Emphasis(vec![Inline::Text("debug".to_string())]),
                 Inline::Text(" for testing".to_string())
             ])],
@@ -154,11 +148,9 @@ fn test_env_var_mixed_case() {
     assert_eq!(
         doc,
         Document {
-            blocks: vec![Block::Paragraph(vec![
-                Inline::Text("Use ".to_string()),
-                Inline::Text("my_custom_var".to_string()),
-                Inline::Text(" for configuration".to_string())
-            ])],
+            blocks: vec![Block::Paragraph(vec![Inline::Text(
+                "Use my_custom_var for configuration".to_string()
+            )])],
         }
     );
 }

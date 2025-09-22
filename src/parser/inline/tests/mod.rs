@@ -1,5 +1,6 @@
 mod autolink;
 mod code_span;
+mod consecutive_text_elements;
 mod emphasis;
 mod environment_variable;
 mod footnote_reference;

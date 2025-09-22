@@ -26,13 +26,47 @@ use std::rc::Rc;
 
 use super::util::conditional_inline;
 
+/// Merges consecutive Text elements into a single Text element
+fn merge_consecutive_text_elements(inlines: Vec<Inline>) -> Vec<Inline> {
+    let mut result = Vec::new();
+    let mut current_text = String::new();
+    let mut has_text = false;
+
+    for inline in inlines {
+        match inline {
+            Inline::Text(text) => {
+                current_text.push_str(&text);
+                has_text = true;
+            }
+            other => {
+                // If we have accumulated text, add it to result
+                if has_text {
+                    result.push(Inline::Text(current_text.clone()));
+                    current_text.clear();
+                    has_text = false;
+                }
+                // Add the non-text element
+                result.push(other);
+            }
+        }
+    }
+
+    // Don't forget the last accumulated text
+    if has_text {
+        result.push(Inline::Text(current_text));
+    }
+
+    result
+}
+
 pub(crate) fn inline_many0<'a>(
     state: Rc<MarkdownParserState>,
 ) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<Inline>> {
     move |input: &'a str| {
         let (input, list_of_lists) = many0(inline(state.clone())).parse(input)?;
         let r: Vec<_> = list_of_lists.into_iter().flatten().collect();
-        Ok((input, r))
+        let merged = merge_consecutive_text_elements(r);
+        Ok((input, merged))
     }
 }
 
@@ -42,7 +76,8 @@ pub(crate) fn inline_many1<'a>(
     move |input: &'a str| {
         let (input, list_of_lists) = many1(inline(state.clone())).parse(input)?;
         let r: Vec<_> = list_of_lists.into_iter().flatten().collect();
-        Ok((input, r))
+        let merged = merge_consecutive_text_elements(r);
+        Ok((input, merged))
     }
 }
 
