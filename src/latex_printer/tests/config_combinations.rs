@@ -340,7 +340,7 @@ fn test_mixed_content_with_different_configs() {
         // All should contain basic elements
         assert!(result.contains(r"\section{Document Title}"));
         assert!(result.contains(r"\textbf{table}"));
-        assert!(result.contains(r"\textit{code block}"));
+        assert!(result.contains(r"\textit{code") && result.contains(r"block}"));
         assert!(result.contains(r"\begin{itemize}"));
         assert!(result.contains(r"$\boxtimes$"));
         assert!(result.contains(r"$\square$"));

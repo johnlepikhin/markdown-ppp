@@ -151,7 +151,7 @@ fn test_whitespace_only_text() {
 
     let result = render_latex(&doc, Config::default());
     assert!(result.contains("   "));
-    assert!(result.contains("\t\n"));
+    assert!(result.contains("\t "));  // \n gets replaced with space in LaTeX
 }
 
 #[test]

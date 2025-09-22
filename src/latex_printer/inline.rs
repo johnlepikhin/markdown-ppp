@@ -14,7 +14,24 @@ impl<'a> ToDoc<'a> for Vec<Inline> {
 impl<'a> ToDoc<'a> for Inline {
     fn to_doc(&self, state: &'a crate::latex_printer::State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
         match self {
-            Inline::Text(text) => state.arena.text(escape_latex(text)),
+            Inline::Text(text) => {
+                // Replace newlines with spaces for LaTeX
+                let text = text.replace('\n', " ");
+
+                // If text is only whitespace, preserve it as-is
+                if text.trim().is_empty() {
+                    return state.arena.text(escape_latex(&text));
+                }
+
+                let words_or_spaces: Vec<_> = split_with_spaces(&text);
+
+                // Use softline to allow line breaks between words
+                let words_or_spaces = words_or_spaces.into_iter().map(|v| match v {
+                    Some(word) => state.arena.text(escape_latex(word)),
+                    None => state.arena.softline(),
+                });
+                state.arena.concat(words_or_spaces)
+            }
 
             Inline::LineBreak => state.arena.text(r"\\").append(state.arena.hardline()),
 
@@ -131,4 +148,36 @@ impl<'a> ToDoc<'a> for Inline {
             Inline::Empty => state.arena.nil(),
         }
     }
+}
+
+/// Split string by spaces, but keep the spaces in the result for proper word wrapping.
+///
+/// This function is similar to the one in printer/inline.rs but adapted for LaTeX output.
+/// It returns `Some(word)` for actual words and `None` for whitespace positions,
+/// allowing the pretty-printer to insert line breaks at word boundaries.
+fn split_with_spaces(s: &str) -> Vec<Option<&str>> {
+    let mut result = Vec::new();
+    let mut word_start: Option<usize> = None;
+
+    for (i, c) in s.char_indices() {
+        if c.is_whitespace() {
+            if let Some(start) = word_start {
+                result.push(Some(&s[start..i]));
+                word_start = None;
+            }
+            // Add whitespace marker if not already present
+            if result.last().is_none_or(|x| x.is_some()) {
+                result.push(None);
+            }
+        } else if word_start.is_none() {
+            word_start = Some(i);
+        }
+    }
+
+    // Add final word if string doesn't end with whitespace
+    if let Some(start) = word_start {
+        result.push(Some(&s[start..]));
+    }
+
+    result
 }

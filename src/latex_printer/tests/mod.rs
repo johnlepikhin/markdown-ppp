@@ -233,7 +233,7 @@ fn test_links() {
 fn test_config_width() {
     let doc = Document {
         blocks: vec![Block::Paragraph(vec![Inline::Text(
-            "This is a very long line that should be wrapped at the specified width limit"
+            "This is a very long line that should be wrapped at the specified width limit and it contains many words that exceed forty characters"
                 .to_string(),
         )])],
     };
@@ -244,6 +244,92 @@ fn test_config_width() {
     let result_narrow = render_latex(&doc, config_narrow);
     let result_wide = render_latex(&doc, config_wide);
 
-    // The narrow config should have more line breaks
+    println!("Narrow (width=40):\n{}", result_narrow);
+    println!("Wide (width=120):\n{}", result_wide);
+
+    // The narrow config should have more line breaks if width works
+    // BUT this currently fails because Inline::Text doesn't respect width!
+    assert!(
+        result_narrow.lines().count() > result_wide.lines().count(),
+        "Width control is not working: narrow={} lines, wide={} lines",
+        result_narrow.lines().count(),
+        result_wide.lines().count()
+    );
+}
+
+#[test]
+fn test_width_works_for_complex_content() {
+    // This test verifies that width control works for other elements (not just Text)
+    let doc = Document {
+        blocks: vec![Block::Paragraph(vec![
+            Inline::Text("Start ".to_string()),
+            Inline::Strong(vec![Inline::Text(
+                "bold very long text that should wrap".to_string(),
+            )]),
+            Inline::Text(" middle ".to_string()),
+            Inline::Emphasis(vec![Inline::Text(
+                "italic very long text that should also wrap".to_string(),
+            )]),
+            Inline::Text(" end".to_string()),
+        ])],
+    };
+
+    let config_narrow = Config::default().with_width(30);
+    let config_wide = Config::default().with_width(120);
+
+    let result_narrow = render_latex(&doc, config_narrow);
+    let result_wide = render_latex(&doc, config_wide);
+
+    println!("Complex narrow (width=30):\n{}", result_narrow);
+    println!("Complex wide (width=120):\n{}", result_wide);
+
+    // This should work because pretty-printer handles complex structures
+    // The issue is specifically with Inline::Text nodes
     assert!(result_narrow.lines().count() >= result_wide.lines().count());
+}
+
+#[test]
+fn test_code_blocks_no_wrapping() {
+    // Code blocks should NOT wrap regardless of width setting
+    let doc = Document {
+        blocks: vec![Block::Paragraph(vec![
+            Inline::Text("This is a much longer text before the code block that should definitely wrap on narrow width settings because it contains many words and exceeds thirty characters".to_string()),
+            Inline::Code("this is a very long code snippet with spaces that should not wrap regardless of width setting".to_string()),
+            Inline::Text(" and this is also a longer text after the code block that should wrap".to_string()),
+        ])],
+    };
+
+    let config_narrow = Config::default().with_width(20);
+    let config_wide = Config::default().with_width(120);
+
+    let result_narrow = render_latex(&doc, config_narrow);
+    let result_wide = render_latex(&doc, config_wide);
+
+    println!("Code narrow (width=20):\n{}", result_narrow);
+    println!("Code wide (width=120):\n{}", result_wide);
+
+    // Code should remain on same line in both cases (only text should wrap)
+    let narrow_lines: Vec<&str> = result_narrow.lines().collect();
+    let wide_lines: Vec<&str> = result_wide.lines().collect();
+
+    // Check that the code snippet appears as a single unit in both outputs
+    let code_pattern = r"\texttt{this is a very long code snippet with spaces that should not wrap regardless of width setting}";
+
+    // Both outputs should contain the code pattern on a single line
+    assert!(
+        result_narrow.contains(code_pattern),
+        "Code should not be broken in narrow output"
+    );
+    assert!(
+        result_wide.contains(code_pattern),
+        "Code should not be broken in wide output"
+    );
+
+    // The text should wrap in narrow but not in wide
+    assert!(
+        narrow_lines.len() > wide_lines.len(),
+        "Text should wrap more in narrow width: narrow={} lines, wide={} lines",
+        narrow_lines.len(),
+        wide_lines.len()
+    );
 }
