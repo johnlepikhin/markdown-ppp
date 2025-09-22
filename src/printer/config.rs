@@ -1,3 +1,4 @@
+/// Configuration for Markdown pretty-printing output.
 pub struct Config {
     pub(crate) width: usize,
     pub(crate) spaces_before_list_item: usize,

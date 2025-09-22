@@ -39,7 +39,7 @@
 //!
 //! # Configuration
 //!
-//! Customize the output format using [`Config`]:
+//! Customize the output format using configuration:
 //!
 //! ```rust
 //! use markdown_ppp::printer::{render_markdown, config::Config};
@@ -51,6 +51,8 @@
 
 mod block;
 mod blockquote;
+
+/// Configuration options for Markdown pretty-printing.
 pub mod config;
 mod github_alert;
 mod heading;

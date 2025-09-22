@@ -41,7 +41,7 @@
 //!
 //! # Configuration
 //!
-//! Customize the HTML output using [`Config`]:
+//! Customize the HTML output using configuration:
 //!
 //! ```rust
 //! use markdown_ppp::html_printer::{render_html, config::Config};
@@ -52,6 +52,8 @@
 //! ```
 
 mod block;
+
+/// Configuration options for HTML rendering.
 pub mod config;
 mod github_alert;
 mod index;

@@ -32,7 +32,7 @@
 //!
 //! # Configuration
 //!
-//! The parser behavior can be extensively customized using [`MarkdownParserConfig`]:
+//! The parser behavior can be extensively customized using configuration:
 //!
 //! ```rust
 //! use markdown_ppp::parser::config::*;
@@ -45,6 +45,8 @@
 //! ```
 
 mod blocks;
+
+/// Configuration options for Markdown parsing behavior.
 pub mod config;
 mod inline;
 mod link_util;

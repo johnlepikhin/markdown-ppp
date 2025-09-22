@@ -480,5 +480,10 @@ fn test_complex_inline_combinations() {
     let result = render_latex(&doc, Config::default());
     assert!(result.contains(r"\textbf{bold with \textit{italic} inside}"));
     // Check for the strikethrough content with possible line breaks between words
-    assert!(result.contains(r"\sout{") && result.contains(r"struck") && result.contains(r"\texttt{code}") && result.contains(r"}"));
+    assert!(
+        result.contains(r"\sout{")
+            && result.contains(r"struck")
+            && result.contains(r"\texttt{code}")
+            && result.contains(r"}")
+    );
 }

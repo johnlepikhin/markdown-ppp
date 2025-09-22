@@ -267,6 +267,7 @@ pub enum Alignment {
 // ——————————————————————————————————————————————————————————————————————————
 
 #[derive(Debug, Clone, PartialEq)]
+/// Footnote definition block (e.g., `[^label]: content`).
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FootnoteDefinition {
     /// Normalized label (without leading `^`).
@@ -280,6 +281,7 @@ pub struct FootnoteDefinition {
 // Inline‑level nodes
 // ——————————————————————————————————————————————————————————————————————————
 
+/// Inline-level elements within paragraphs, headings, and other blocks.
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Inline {
@@ -349,6 +351,7 @@ pub struct Image {
     pub alt: String,
 }
 
+/// Reference-style link (e.g., `[text][label]` or `[label][]`).
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LinkReference {
