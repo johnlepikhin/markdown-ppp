@@ -1,6 +1,6 @@
 use crate::ast::*;
-use crate::ast_transform::Visitor;
 use crate::ast_transform::visitor::VisitWith;
+use crate::ast_transform::Visitor;
 
 // Test helper to create test document with correct AST structure
 fn create_test_doc() -> Document {
@@ -19,12 +19,9 @@ fn create_test_doc() -> Document {
                 Inline::Link(Link {
                     destination: "http://example.com".to_string(),
                     title: Some("Example".to_string()),
-                    children: vec![
-                        Inline::Text("link".to_string()),
-                    ],
+                    children: vec![Inline::Text("link".to_string())],
                 }),
             ]),
-
             // Heading with correct structure
             Block::Heading(Heading {
                 kind: HeadingKind::Atx(2),
@@ -35,48 +32,40 @@ fn create_test_doc() -> Document {
                     Inline::Autolink("mailto:test@example.com".to_string()),
                 ],
             }),
-
             // Code block with correct structure
             Block::CodeBlock(CodeBlock {
-                kind: CodeBlockKind::Fenced { info: Some("rust".to_string()) },
+                kind: CodeBlockKind::Fenced {
+                    info: Some("rust".to_string()),
+                },
                 literal: "fn main() { println!(\"Hello\"); }".to_string(),
             }),
-
             // Blockquote with nested blocks
-            Block::BlockQuote(vec![
-                Block::Paragraph(vec![
-                    Inline::Text("Quoted text with ".to_string()),
-                    Inline::Html("<em>HTML</em>".to_string()),
-                ]),
-            ]),
-
+            Block::BlockQuote(vec![Block::Paragraph(vec![
+                Inline::Text("Quoted text with ".to_string()),
+                Inline::Html("<em>HTML</em>".to_string()),
+            ])]),
             // List with correct structure
             Block::List(List {
                 kind: ListKind::Bullet(ListBulletKind::Star),
                 items: vec![
                     ListItem {
                         task: None,
-                        blocks: vec![
-                            Block::Paragraph(vec![
-                                Inline::Text("First item".to_string()),
-                            ]),
-                        ],
+                        blocks: vec![Block::Paragraph(vec![Inline::Text(
+                            "First item".to_string(),
+                        )])],
                     },
                     ListItem {
                         task: None,
-                        blocks: vec![
-                            Block::Paragraph(vec![
-                                Inline::Text("Second item with ".to_string()),
-                                Inline::LinkReference(LinkReference {
-                                    label: vec![Inline::Text("ref".to_string())],
-                                    text: vec![Inline::Text("reference".to_string())],
-                                }),
-                            ]),
-                        ],
+                        blocks: vec![Block::Paragraph(vec![
+                            Inline::Text("Second item with ".to_string()),
+                            Inline::LinkReference(LinkReference {
+                                label: vec![Inline::Text("ref".to_string())],
+                                text: vec![Inline::Text("reference".to_string())],
+                            }),
+                        ])],
                     },
                 ],
             }),
-
             // Table with correct structure (first row is header)
             Block::Table(Table {
                 rows: vec![
@@ -96,27 +85,20 @@ fn create_test_doc() -> Document {
                 ],
                 alignments: vec![Alignment::Left, Alignment::Left],
             }),
-
             // Footnote definition
             Block::FootnoteDefinition(FootnoteDefinition {
                 label: "note1".to_string(),
-                blocks: vec![
-                    Block::Paragraph(vec![
-                        Inline::Text("Footnote content".to_string()),
-                    ]),
-                ],
+                blocks: vec![Block::Paragraph(vec![Inline::Text(
+                    "Footnote content".to_string(),
+                )])],
             }),
-
             // GitHub Alert
             Block::GitHubAlert(GitHubAlert {
                 alert_type: GitHubAlertType::Warning,
-                blocks: vec![
-                    Block::Paragraph(vec![
-                        Inline::Text("Warning message".to_string()),
-                    ]),
-                ],
+                blocks: vec![Block::Paragraph(vec![Inline::Text(
+                    "Warning message".to_string(),
+                )])],
             }),
-
             // Link definition (not Definition)
             Block::Definition(LinkDefinition {
                 label: vec![
@@ -214,8 +196,8 @@ impl Visitor for NodeCounter {
             Inline::Strikethrough(_) => self.strikethrough_count += 1,
             Inline::LinkReference(_) => self.link_ref_count += 1,
             Inline::FootnoteReference(_) => self.footnote_ref_count += 1,
-            Inline::LineBreak => {},
-            Inline::Empty => {},
+            Inline::LineBreak => {}
+            Inline::Empty => {}
         }
         self.walk_inline(inline);
     }
@@ -233,7 +215,7 @@ impl Visitor for NodeCounter {
             Block::FootnoteDefinition(_) => self.footnote_def_count += 1,
             Block::GitHubAlert(_) => self.github_alert_count += 1,
             Block::Definition(_) => self.definition_count += 1,
-            Block::Empty => {},
+            Block::Empty => {}
         }
         self.walk_block(block);
     }
@@ -324,10 +306,7 @@ fn test_visitor_with_empty_paragraph() {
 #[test]
 fn test_visitor_with_only_empty_inlines() {
     let doc = Document {
-        blocks: vec![Block::Paragraph(vec![
-            Inline::Empty,
-            Inline::Empty,
-        ])],
+        blocks: vec![Block::Paragraph(vec![Inline::Empty, Inline::Empty])],
     };
     let mut collector = TextCollector { texts: Vec::new() };
 
@@ -340,29 +319,21 @@ fn test_visitor_with_only_empty_inlines() {
 fn test_visitor_deep_nesting() {
     // Create deeply nested structure
     let doc = Document {
-        blocks: vec![Block::BlockQuote(vec![
-            Block::List(List {
-                kind: ListKind::Bullet(ListBulletKind::Dash),
-                items: vec![ListItem {
-                    task: None,
-                    blocks: vec![Block::BlockQuote(vec![
-                        Block::Paragraph(vec![
-                            Inline::Link(Link {
-                                destination: "http://example.com".to_string(),
-                                title: None,
-                                children: vec![
-                                    Inline::Strong(vec![
-                                        Inline::Emphasis(vec![
-                                            Inline::Text("Deeply nested text".to_string()),
-                                        ]),
-                                    ]),
-                                ],
-                            }),
-                        ]),
-                    ])],
-                }],
-            }),
-        ])],
+        blocks: vec![Block::BlockQuote(vec![Block::List(List {
+            kind: ListKind::Bullet(ListBulletKind::Dash),
+            items: vec![ListItem {
+                task: None,
+                blocks: vec![Block::BlockQuote(vec![Block::Paragraph(vec![
+                    Inline::Link(Link {
+                        destination: "http://example.com".to_string(),
+                        title: None,
+                        children: vec![Inline::Strong(vec![Inline::Emphasis(vec![Inline::Text(
+                            "Deeply nested text".to_string(),
+                        )])])],
+                    }),
+                ])])],
+            }],
+        })])],
     };
 
     let mut collector = TextCollector { texts: Vec::new() };
@@ -411,9 +382,7 @@ fn test_visitor_with_html_block() {
     let doc = Document {
         blocks: vec![
             Block::HtmlBlock("<div>HTML content</div>".to_string()),
-            Block::Paragraph(vec![
-                Inline::Html("<span>Inline HTML</span>".to_string()),
-            ]),
+            Block::Paragraph(vec![Inline::Html("<span>Inline HTML</span>".to_string())]),
         ],
     };
 
