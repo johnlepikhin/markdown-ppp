@@ -262,14 +262,14 @@ fn demonstrate_serialization() {
     match serde_json::to_string_pretty(&doc_with_ids) {
         Ok(json) => {
             println!("✓ Document serialized to JSON:");
-            println!("{}", json);
+            println!("{json}");
 
             // Test deserialization
             match serde_json::from_str::<with_ids::Document>(&json) {
                 Ok(_) => println!("✓ Document deserialized successfully!"),
-                Err(e) => println!("✗ Deserialization failed: {}", e),
+                Err(e) => println!("✗ Deserialization failed: {e}"),
             }
         }
-        Err(e) => println!("✗ Serialization failed: {}", e),
+        Err(e) => println!("✗ Serialization failed: {e}"),
     }
 }

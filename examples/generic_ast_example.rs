@@ -65,9 +65,9 @@ fn main() {
     println!("\n6. Chain Transformations:");
     let result = doc
         .with_data(42u32) // Document -> generic::Document<u32>
-        .map_data(|n| format!("value_{}", n)) // -> generic::Document<String>
+        .map_data(|n| format!("value_{n}")) // -> generic::Document<String>
         .map_data(|s| s.chars().count()) // -> generic::Document<usize>
-        .map_data(|n| n as f64 * 3.14); // -> generic::Document<f64>
+        .map_data(|n| n as f64 * std::f64::consts::PI); // -> generic::Document<f64>
 
     println!("Final transformed value: {}", result.user_data);
 
@@ -75,6 +75,7 @@ fn main() {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct CustomMeta {
     name: String,
     priority: u8,

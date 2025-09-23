@@ -269,7 +269,7 @@ fn print_document_summary(doc: &with_ids::Document) {
                 l.user_data.id(),
                 l.items.len()
             ),
-            _ => println!("    Block {}: Other", i),
+            _ => println!("    Block {i}: Other"),
         }
     }
 }
@@ -281,7 +281,7 @@ fn print_string_document_summary(doc: &generic::Document<String>) {
         match block {
             generic::Block::Heading(h) => println!("    Block {}: Heading ('{}')", i, h.user_data),
             generic::Block::Paragraph { user_data, .. } => {
-                println!("    Block {}: Paragraph ('{}')", i, user_data)
+                println!("    Block {i}: Paragraph ('{user_data})')")
             }
             generic::Block::List(l) => println!(
                 "    Block {}: List ('{}', {} items)",
@@ -289,7 +289,7 @@ fn print_string_document_summary(doc: &generic::Document<String>) {
                 l.user_data,
                 l.items.len()
             ),
-            _ => println!("    Block {}: Other", i),
+            _ => println!("    Block {i}: Other"),
         }
     }
 }
@@ -303,7 +303,7 @@ fn print_priority_document_summary(doc: &generic::Document<u64>) {
                 println!("    Block {}: Heading (Priority: {})", i, h.user_data)
             }
             generic::Block::Paragraph { user_data, .. } => {
-                println!("    Block {}: Paragraph (Priority: {})", i, user_data)
+                println!("    Block {i}: Paragraph (Priority: {user_data})")
             }
             generic::Block::List(l) => println!(
                 "    Block {}: List (Priority: {}, {} items)",
@@ -311,7 +311,7 @@ fn print_priority_document_summary(doc: &generic::Document<u64>) {
                 l.user_data,
                 l.items.len()
             ),
-            _ => println!("    Block {}: Other", i),
+            _ => println!("    Block {i}: Other"),
         }
     }
 }
@@ -323,7 +323,7 @@ fn print_metadata_document_summary(doc: &generic::Document<ElementMetadata>) {
         match block {
             generic::Block::Heading(h) => println!("    Block {}: Heading ({:?})", i, h.user_data),
             generic::Block::Paragraph { user_data, .. } => {
-                println!("    Block {}: Paragraph ({:?})", i, user_data)
+                println!("    Block {i}: Paragraph ({user_data:?})")
             }
             generic::Block::List(l) => println!(
                 "    Block {}: List ({:?}, {} items)",
@@ -331,7 +331,7 @@ fn print_metadata_document_summary(doc: &generic::Document<ElementMetadata>) {
                 l.user_data,
                 l.items.len()
             ),
-            _ => println!("    Block {}: Other", i),
+            _ => println!("    Block {i}: Other"),
         }
     }
 }
