@@ -35,7 +35,7 @@ If you want **only** the AST definitions without parsing functionality, disable 
 
 ```toml
 [dependencies]
-markdown-ppp = { version = "0.1.0", default-features = false }
+markdown-ppp = { version = "2.6.0", default-features = false }
 ```
 
 ---
@@ -205,6 +205,69 @@ You can use the AST independently without the parsing functionality by disabling
 
 ---
 
+## 🏷️ Specialized AST Types
+
+The `ast_specialized` module provides pre-built specialized versions of the generic AST for element identification. This feature is disabled by default and must be enabled via the `ast-specialized` feature.
+
+### Quick Start
+
+Enable the feature in your `Cargo.toml`:
+
+```toml
+[dependencies]
+markdown-ppp = { version = "2.6.0", features = ["ast-specialized"] }
+```
+
+### Available Types
+
+The module provides specialized data types for element identification:
+
+- **`ElementId`** - Unique identifier for AST elements
+
+### Type Aliases
+
+Pre-defined type aliases make it easy to work with specialized AST:
+
+```rust
+use markdown_ppp::ast_specialized::with_ids;
+
+// AST with element IDs
+let doc_with_ids: with_ids::Document = /* ... */;
+```
+
+### Utility Functions
+
+Helper functions for common operations:
+
+```rust
+use markdown_ppp::ast_specialized::utilities::id_utils;
+use markdown_ppp::parser::parse_markdown;
+
+// Parse and add IDs to all elements
+let doc = parse_markdown(state, "# Hello *world*!").unwrap();
+let doc_with_ids = id_utils::add_ids_to_document(doc);
+```
+
+### Element ID Generation
+
+```rust
+use markdown_ppp::ast_specialized::element_id::{ElementId, IdGenerator};
+
+let mut id_gen = IdGenerator::new();
+let id1 = id_gen.generate(); // ElementId(1)
+let id2 = id_gen.generate(); // ElementId(2)
+
+// Start from specific ID
+let mut custom_gen = IdGenerator::starting_from(100);
+let id = custom_gen.generate(); // ElementId(100)
+```
+
+This module is particularly useful for:
+- **AST manipulation tools** - maintaining element references during transformations
+- **Debugging tools** - providing detailed element tracking
+
+---
+
 ## 🔄 AST Transformation
 
 The `ast_transform` module provides a comprehensive toolkit for modifying, querying, and transforming parsed Markdown documents. This feature is disabled by default and must be enabled via the `ast-transform` feature.
@@ -215,7 +278,7 @@ Enable the feature in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-markdown-ppp = { version = "2.4.0", features = ["ast-transform"] }
+markdown-ppp = { version = "2.6.0", features = ["ast-transform"] }
 ```
 
 Then use the transformation API:
@@ -477,6 +540,7 @@ let latex_output = render_latex(&doc, config);
 | `html-printer`  | Enables AST → HTML string conversion. Enabled by default.          |
 | `latex-printer` | Enables AST → LaTeX string conversion. Disabled by default.        |
 | `ast-transform` | Enables AST transformation, query, and visitor functionality. Disabled by default. |
+| `ast-specialized` | Provides specialized AST types with element IDs. Disabled by default. |
 | `ast-serde`     | Adds `Serialize` and `Deserialize` traits to all AST types via `serde`. Disabled by default. |
 
 If you only need the AST types without parsing functionality, you can add the crate without default features:

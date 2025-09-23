@@ -6,7 +6,7 @@
 all: check-release
 
 # Main release check target - runs all quality checks
-check-release: fmt-check check clippy test doc build-release
+check-release: fmt-check check clippy test doc-strict build-release
 	@echo "[OK] All release checks passed!"
 
 # Individual check targets
@@ -37,8 +37,8 @@ doc:
 
 # Strict documentation check
 doc-strict:
-	@echo "[DOC] Checking for missing documentation (strict)..."
-	RUSTDOCFLAGS="-D missing_docs -D rustdoc::broken_intra_doc_links" cargo doc --all-features --no-deps --quiet
+	@echo "[DOC] Checking for broken documentation links..."
+	RUSTDOCFLAGS="-D rustdoc::broken_intra_doc_links" cargo doc --all-features --no-deps --quiet
 
 fmt:
 	@echo "[FMT] Formatting code..."

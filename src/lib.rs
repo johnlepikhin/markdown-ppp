@@ -6,7 +6,24 @@
 //! and converting it to various output formats including Markdown, HTML, and LaTeX.
 
 /// Fully-typed Abstract Syntax Tree (AST) for CommonMark + GitHub Flavored Markdown.
+///
+/// The AST module provides a generic AST structure. See [`ast::generic`] for more details.
 pub mod ast;
+
+/// Specialized AST types for common use cases like element IDs and source tracking.
+///
+/// This module provides pre-defined specialized versions of the generic AST
+/// for scenarios like element identification and source location tracking.
+///
+/// # Available modules
+///
+/// - `element_id` - Element ID support and related functionality
+/// - `source_info` - Source location tracking
+/// - `element_data` - Combined element ID and source information
+/// - `type_aliases` - Convenient type aliases for specialized AST types
+/// - `utilities` - Helper functions and utilities
+#[cfg(feature = "ast-specialized")]
+pub mod ast_specialized;
 
 /// Markdown parser for CommonMark + GFM.
 ///

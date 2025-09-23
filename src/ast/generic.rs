@@ -1,46 +1,59 @@
-//! Fully‑typed Abstract Syntax Tree (AST) for CommonMark + GitHub Flavored Markdown (GFM)
-//! ------------------------------------------------------------------------------------
-//! This module models every construct described in the **CommonMark 1.0 specification**
-//! together with the widely‑used **GFM extensions**: tables, strikethrough, autolinks,
-//! task‑list items and footnotes.
+//! Generic Abstract Syntax Tree (AST) for CommonMark + GitHub Flavored Markdown (GFM)
+//! =====================================================================================
 //!
-//! The design separates **block‑level** and **inline‑level** nodes because parsers and
-//! renderers typically operate on these tiers independently.
+//! This module provides generic versions of all AST structures that allow attaching
+//! user-defined data to any AST node. The generic parameter `T` represents the type
+//! of user data that can be associated with each element.
 //!
-//! ```text
-//! Document ─┐
-//!           └─ Block ─┐
-//!                     ├─ Inline
-//!                     └─ ...
+//! # Features
+//!
+//! - **Zero-cost abstraction**: When `T = ()`, no additional memory is used
+//! - **Flexible user data**: Support for any user-defined type
+//! - **Serde compatibility**: Proper serialization with optional user data fields
+//! - **Type safety**: Compile-time guarantees about data presence
+//!
+//! # Examples
+//!
+//! ```rust
+//! use markdown_ppp::ast::generic::*;
+//!
+//! // AST without user data (equivalent to regular AST)
+//! type SimpleDocument = Document<()>;
+//!
+//! // AST with element IDs
+//! #[derive(Debug, Clone, PartialEq)]
+//! struct ElementId(u32);
+//! type DocumentWithIds = Document<ElementId>;
+//!
+//! // AST with source information
+//! #[derive(Debug, Clone, PartialEq)]
+//! struct SourceInfo {
+//!     line: u32,
+//!     column: u32,
+//! }
+//! type DocumentWithSource = Document<SourceInfo>;
 //! ```
-//!
-//! # User Data Support
-//!
-//! This crate supports attaching user-defined data to AST nodes through the generic
-//! AST module. See [`crate::ast::generic`] for more details.
 
-/// Conversion utilities for AST nodes with user data
-pub mod convert;
-
-/// Generic AST types that support user-defined data
-pub mod generic;
-
-/// Visitor-based MapData implementation to avoid recursion limits
-pub mod map_data_visitor;
-
-mod github_alerts;
-pub use github_alerts::{GitHubAlert, GitHubAlertType};
+// Re-export types from parent module that don't need generics
+pub use super::{
+    Alignment, CodeBlockKind, GitHubAlert, GitHubAlertType, HeadingKind, ListBulletKind,
+    ListOrderedKindOptions, SetextHeading, TaskState,
+};
 
 // ——————————————————————————————————————————————————————————————————————————
 // Document root
 // ——————————————————————————————————————————————————————————————————————————
 
-/// Root of a Markdown document
+/// Root of a Markdown document with optional user data
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Document {
+pub struct Document<T = ()> {
     /// Top‑level block sequence **in document order**.
-    pub blocks: Vec<Block>,
+    pub blocks: Vec<Block<T>>,
+
+    /// User-defined data associated with this document
+    #[cfg_attr(feature = "ast-serde", serde(default))]
+    pub user_data: T,
 }
 
 // ——————————————————————————————————————————————————————————————————————————
@@ -50,75 +63,75 @@ pub struct Document {
 /// Block‑level constructs in the order they appear in the CommonMark spec.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Block {
+pub enum Block<T = ()> {
     /// Ordinary paragraph
-    Paragraph(Vec<Inline>),
+    Paragraph {
+        content: Vec<Inline<T>>,
+        #[cfg_attr(feature = "ast-serde", serde(default))]
+        user_data: T,
+    },
 
     /// ATX (`# Heading`) or Setext (`===`) heading
-    Heading(Heading),
+    Heading(Heading<T>),
 
     /// Thematic break (horizontal rule)
-    ThematicBreak,
+    ThematicBreak {
+        #[cfg_attr(feature = "ast-serde", serde(default))]
+        user_data: T,
+    },
 
     /// Block quote
-    BlockQuote(Vec<Block>),
+    BlockQuote {
+        blocks: Vec<Block<T>>,
+        #[cfg_attr(feature = "ast-serde", serde(default))]
+        user_data: T,
+    },
 
     /// List (bullet or ordered)
-    List(List),
+    List(List<T>),
 
     /// Fenced or indented code block
-    CodeBlock(CodeBlock),
+    CodeBlock(CodeBlock<T>),
 
     /// Raw HTML block
-    HtmlBlock(String),
+    HtmlBlock {
+        content: String,
+        #[cfg_attr(feature = "ast-serde", serde(default))]
+        user_data: T,
+    },
 
-    /// Link reference definition.  Preserved for round‑tripping.
-    Definition(LinkDefinition),
+    /// Link reference definition. Preserved for round‑tripping.
+    Definition(LinkDefinition<T>),
 
     /// Tables
-    Table(Table),
+    Table(Table<T>),
 
     /// Footnote definition
-    FootnoteDefinition(FootnoteDefinition),
+    FootnoteDefinition(FootnoteDefinition<T>),
 
     /// GitHub alert block (NOTE, TIP, IMPORTANT, WARNING, CAUTION)
-    GitHubAlert(GitHubAlert),
+    GitHubAlert(GitHubAlertNode<T>),
 
     /// Empty block. This is used to represent skipped blocks in the AST.
-    Empty,
+    Empty {
+        #[cfg_attr(feature = "ast-serde", serde(default))]
+        user_data: T,
+    },
 }
 
 /// Heading with level 1–6 and inline content.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Heading {
+pub struct Heading<T = ()> {
     /// Kind of heading (ATX or Setext) together with the level.
     pub kind: HeadingKind,
 
     /// Inlines that form the heading text (before trimming).
-    pub content: Vec<Inline>,
-}
+    pub content: Vec<Inline<T>>,
 
-/// Heading with level 1–6 and inline content.
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum HeadingKind {
-    /// ATX heading (`# Heading`)
-    Atx(u8),
-
-    /// Setext heading (`===` or `---`)
-    Setext(SetextHeading),
-}
-
-/// Setext heading with level and underline type.
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum SetextHeading {
-    /// Setext heading with `=` underline
-    Level1,
-
-    /// Setext heading with `-` underline
-    Level2,
+    /// User-defined data associated with this heading
+    #[cfg_attr(feature = "ast-serde", serde(default))]
+    pub user_data: T,
 }
 
 // ——————————————————————————————————————————————————————————————————————————
@@ -128,13 +141,17 @@ pub enum SetextHeading {
 /// A list container — bullet or ordered.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct List {
+pub struct List<T = ()> {
     /// Kind of list together with additional semantic data (start index or
     /// bullet marker).
     pub kind: ListKind,
 
     /// List items in source order.
-    pub items: Vec<ListItem>,
+    pub items: Vec<ListItem<T>>,
+
+    /// User-defined data associated with this list
+    #[cfg_attr(feature = "ast-serde", serde(default))]
+    pub user_data: T,
 }
 
 /// Specifies *what kind* of list we have.
@@ -148,48 +165,19 @@ pub enum ListKind {
     Bullet(ListBulletKind),
 }
 
-/// Specifies *what kind* of list we have.
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ListOrderedKindOptions {
-    /// Start index (1, 2, …) for ordered lists.
-    pub start: u64,
-}
-
-/// Concrete bullet character used for a bullet list.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum ListBulletKind {
-    /// `-` U+002D
-    Dash,
-
-    /// `*` U+002A
-    Star,
-
-    /// `+` U+002B
-    Plus,
-}
-
 /// Item within a list.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ListItem {
+pub struct ListItem<T = ()> {
     /// Task‑list checkbox state (GFM task‑lists). `None` ⇒ not a task list.
     pub task: Option<TaskState>,
 
     /// Nested blocks inside the list item.
-    pub blocks: Vec<Block>,
-}
+    pub blocks: Vec<Block<T>>,
 
-/// State of a task‑list checkbox.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum TaskState {
-    /// Unchecked (GFM task‑list item)
-    Incomplete,
-
-    /// Checked (GFM task‑list item)
-    Complete,
+    /// User-defined data associated with this list item
+    #[cfg_attr(feature = "ast-serde", serde(default))]
+    pub user_data: T,
 }
 
 // ——————————————————————————————————————————————————————————————————————————
@@ -199,26 +187,16 @@ pub enum TaskState {
 /// Fenced or indented code block.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct CodeBlock {
+pub struct CodeBlock<T = ()> {
     /// Distinguishes indented vs fenced code and stores the *info string*.
     pub kind: CodeBlockKind,
 
     /// Literal text inside the code block **without** final newline trimming.
     pub literal: String,
-}
 
-/// The concrete kind of a code block.
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum CodeBlockKind {
-    /// Indented block (≥ 4 spaces or 1 tab per line).
-    Indented,
-
-    /// Fenced block with *optional* info string (language, etc.).
-    Fenced {
-        /// Optional info string containing language identifier and other metadata
-        info: Option<String>,
-    },
+    /// User-defined data associated with this code block
+    #[cfg_attr(feature = "ast-serde", serde(default))]
+    pub user_data: T,
 }
 
 // ——————————————————————————————————————————————————————————————————————————
@@ -228,15 +206,19 @@ pub enum CodeBlockKind {
 /// Link reference definition (GFM) with a label, destination and optional title.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct LinkDefinition {
+pub struct LinkDefinition<T = ()> {
     /// Link label (acts as the *identifier*).
-    pub label: Vec<Inline>,
+    pub label: Vec<Inline<T>>,
 
     /// Link URL (absolute or relative) or email address.
     pub destination: String,
 
     /// Optional title (for links and images).
     pub title: Option<String>,
+
+    /// User-defined data associated with this link definition
+    #[cfg_attr(feature = "ast-serde", serde(default))]
+    pub user_data: T,
 }
 
 // ——————————————————————————————————————————————————————————————————————————
@@ -247,51 +229,60 @@ pub struct LinkDefinition {
 /// The first row is the header row.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Table {
+pub struct Table<T = ()> {
     /// Each row is a vector of *cells*; header row is **row 0**.
-    pub rows: Vec<TableRow>,
+    pub rows: Vec<TableRow<T>>,
 
     /// Column alignment; `alignments.len() == column_count`.
     pub alignments: Vec<Alignment>,
+
+    /// User-defined data associated with this table
+    #[cfg_attr(feature = "ast-serde", serde(default))]
+    pub user_data: T,
 }
 
 /// A table row is a vector of cells (columns).
-pub type TableRow = Vec<TableCell>;
+pub type TableRow<T> = Vec<TableCell<T>>;
 
 /// A table cell is a vector of inlines (text, links, etc.).
-pub type TableCell = Vec<Inline>;
-
-/// Specifies the alignment of a table cell.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Alignment {
-    /// No alignment specified
-    None,
-
-    /// Left aligned
-    #[default]
-    Left,
-
-    /// Right aligned
-    Center,
-
-    /// Right aligned
-    Right,
-}
+pub type TableCell<T> = Vec<Inline<T>>;
 
 // ——————————————————————————————————————————————————————————————————————————
 // Footnotes
 // ——————————————————————————————————————————————————————————————————————————
 
-#[derive(Debug, Clone, PartialEq)]
 /// Footnote definition block (e.g., `[^label]: content`).
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct FootnoteDefinition {
+pub struct FootnoteDefinition<T = ()> {
     /// Normalized label (without leading `^`).
     pub label: String,
 
     /// Footnote content (blocks).
-    pub blocks: Vec<Block>,
+    pub blocks: Vec<Block<T>>,
+
+    /// User-defined data associated with this footnote definition
+    #[cfg_attr(feature = "ast-serde", serde(default))]
+    pub user_data: T,
+}
+
+// ——————————————————————————————————————————————————————————————————————————
+// GitHub Alerts
+// ——————————————————————————————————————————————————————————————————————————
+
+/// GitHub alert block with user data support
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct GitHubAlertNode<T = ()> {
+    /// Type of alert (NOTE, TIP, IMPORTANT, WARNING, CAUTION)
+    pub alert_type: GitHubAlertType,
+
+    /// Content blocks within the alert
+    pub blocks: Vec<Block<T>>,
+
+    /// User-defined data associated with this GitHub alert
+    #[cfg_attr(feature = "ast-serde", serde(default))]
+    pub user_data: T,
 }
 
 // ——————————————————————————————————————————————————————————————————————————
@@ -299,51 +290,91 @@ pub struct FootnoteDefinition {
 // ——————————————————————————————————————————————————————————————————————————
 
 /// Inline-level elements within paragraphs, headings, and other blocks.
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Inline {
+pub enum Inline<T = ()> {
     /// Plain text (decoded entity references, preserved backslash escapes).
-    Text(String),
+    Text {
+        content: String,
+        #[cfg_attr(feature = "ast-serde", serde(default))]
+        user_data: T,
+    },
 
     /// Hard line break
-    LineBreak,
+    LineBreak {
+        #[cfg_attr(feature = "ast-serde", serde(default))]
+        user_data: T,
+    },
 
     /// Inline code span
-    Code(String),
+    Code {
+        content: String,
+        #[cfg_attr(feature = "ast-serde", serde(default))]
+        user_data: T,
+    },
 
     /// Raw HTML fragment
-    Html(String),
+    Html {
+        content: String,
+        #[cfg_attr(feature = "ast-serde", serde(default))]
+        user_data: T,
+    },
 
     /// Link to a destination with optional title.
-    Link(Link),
+    Link(Link<T>),
 
     /// Reference link
-    LinkReference(LinkReference),
+    LinkReference(LinkReference<T>),
 
     /// Image with optional title.
-    Image(Image),
+    Image(Image<T>),
 
     /// Emphasis (`*` / `_`)
-    Emphasis(Vec<Inline>),
+    Emphasis {
+        content: Vec<Inline<T>>,
+        #[cfg_attr(feature = "ast-serde", serde(default))]
+        user_data: T,
+    },
+
     /// Strong emphasis (`**` / `__`)
-    Strong(Vec<Inline>),
+    Strong {
+        content: Vec<Inline<T>>,
+        #[cfg_attr(feature = "ast-serde", serde(default))]
+        user_data: T,
+    },
+
     /// Strikethrough (`~~`)
-    Strikethrough(Vec<Inline>),
+    Strikethrough {
+        content: Vec<Inline<T>>,
+        #[cfg_attr(feature = "ast-serde", serde(default))]
+        user_data: T,
+    },
 
     /// Autolink (`<https://>` or `<mailto:…>`)
-    Autolink(String),
+    Autolink {
+        url: String,
+        #[cfg_attr(feature = "ast-serde", serde(default))]
+        user_data: T,
+    },
 
     /// Footnote reference (`[^label]`)
-    FootnoteReference(String),
+    FootnoteReference {
+        label: String,
+        #[cfg_attr(feature = "ast-serde", serde(default))]
+        user_data: T,
+    },
 
     /// Empty element. This is used to represent skipped elements in the AST.
-    Empty,
+    Empty {
+        #[cfg_attr(feature = "ast-serde", serde(default))]
+        user_data: T,
+    },
 }
 
 /// Re‑usable structure for links and images (destination + children).
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Link {
+pub struct Link<T = ()> {
     /// Destination URL (absolute or relative) or email address.
     pub destination: String,
 
@@ -351,13 +382,17 @@ pub struct Link {
     pub title: Option<String>,
 
     /// Inline content (text, code, etc.) inside the link or image.
-    pub children: Vec<Inline>,
+    pub children: Vec<Inline<T>>,
+
+    /// User-defined data associated with this link
+    #[cfg_attr(feature = "ast-serde", serde(default))]
+    pub user_data: T,
 }
 
-/// Re‑usable structure for links and images (destination + children).
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+/// Re‑usable structure for images.
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Image {
+pub struct Image<T = ()> {
     /// Image URL (absolute or relative).
     pub destination: String,
 
@@ -366,71 +401,66 @@ pub struct Image {
 
     /// Alternative text.
     pub alt: String,
+
+    /// User-defined data associated with this image
+    #[cfg_attr(feature = "ast-serde", serde(default))]
+    pub user_data: T,
 }
 
 /// Reference-style link (e.g., `[text][label]` or `[label][]`).
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct LinkReference {
+pub struct LinkReference<T = ()> {
     /// Link label (acts as the *identifier*).
-    pub label: Vec<Inline>,
+    pub label: Vec<Inline<T>>,
 
     /// Link text
-    pub text: Vec<Inline>,
+    pub text: Vec<Inline<T>>,
+
+    /// User-defined data associated with this link reference
+    #[cfg_attr(feature = "ast-serde", serde(default))]
+    pub user_data: T,
 }
 
 // ——————————————————————————————————————————————————————————————————————————
-// Backward compatibility type aliases
+// Default implementations for common cases
 // ——————————————————————————————————————————————————————————————————————————
 
-/// Simple document without user data (backward compatible)
-pub type SimpleDocument = generic::Document<()>;
+impl<T: Default> Default for Document<T> {
+    fn default() -> Self {
+        Self {
+            blocks: Vec::new(),
+            user_data: T::default(),
+        }
+    }
+}
 
-/// Simple block without user data (backward compatible)
-pub type SimpleBlock = generic::Block<()>;
+impl<T: Default> Default for Heading<T> {
+    fn default() -> Self {
+        Self {
+            kind: HeadingKind::Atx(1),
+            content: Vec::new(),
+            user_data: T::default(),
+        }
+    }
+}
 
-/// Simple inline without user data (backward compatible)
-pub type SimpleInline = generic::Inline<()>;
+impl<T: Default> Default for List<T> {
+    fn default() -> Self {
+        Self {
+            kind: ListKind::Bullet(ListBulletKind::Dash),
+            items: Vec::new(),
+            user_data: T::default(),
+        }
+    }
+}
 
-/// Simple heading without user data (backward compatible)
-pub type SimpleHeading = generic::Heading<()>;
-
-/// Simple list without user data (backward compatible)
-pub type SimpleList = generic::List<()>;
-
-/// Simple list item without user data (backward compatible)
-pub type SimpleListItem = generic::ListItem<()>;
-
-/// Simple code block without user data (backward compatible)
-pub type SimpleCodeBlock = generic::CodeBlock<()>;
-
-/// Simple link definition without user data (backward compatible)
-pub type SimpleLinkDefinition = generic::LinkDefinition<()>;
-
-/// Simple table without user data (backward compatible)
-pub type SimpleTable = generic::Table<()>;
-
-/// Simple table row without user data (backward compatible)
-pub type SimpleTableRow = generic::TableRow<()>;
-
-/// Simple table cell without user data (backward compatible)
-pub type SimpleTableCell = generic::TableCell<()>;
-
-/// Simple footnote definition without user data (backward compatible)
-pub type SimpleFootnoteDefinition = generic::FootnoteDefinition<()>;
-
-/// Simple GitHub alert without user data (backward compatible)
-pub type SimpleGitHubAlert = generic::GitHubAlertNode<()>;
-
-/// Simple link without user data (backward compatible)
-pub type SimpleLink = generic::Link<()>;
-
-/// Simple image without user data (backward compatible)
-pub type SimpleImage = generic::Image<()>;
-
-/// Simple link reference without user data (backward compatible)
-pub type SimpleLinkReference = generic::LinkReference<()>;
-
-// ——————————————————————————————————————————————————————————————————————————
-// Tests
-// ——————————————————————————————————————————————————————————————————————————
+impl<T: Default> Default for Table<T> {
+    fn default() -> Self {
+        Self {
+            rows: Vec::new(),
+            alignments: Vec::new(),
+            user_data: T::default(),
+        }
+    }
+}
