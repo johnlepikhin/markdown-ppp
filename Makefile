@@ -1,12 +1,12 @@
 # Makefile for markdown-ppp release checks and development tasks
 
-.PHONY: all check-release check test clippy doc fmt fmt-check build build-release clean help
+.PHONY: all check-release check check-all-targets test test-all-targets clippy doc fmt fmt-check build build-release clean help
 
 # Default target
 all: check-release
 
 # Main release check target - runs all quality checks
-check-release: fmt-check check clippy test doc-strict build-release
+check-release: fmt-check check check-all-targets clippy test test-all-targets doc-strict build-release
 	@echo "[OK] All release checks passed!"
 
 # Individual check targets
@@ -15,6 +15,10 @@ check:
 	cargo check --all-features
 	cargo check --all-features --tests
 	cargo check --all-features --benches
+
+check-all-targets:
+	@echo "[CHECK] Running cargo check for all targets..."
+	cargo check --all-targets --all-features
 
 clippy:
 	@echo "[CLIPPY] Running clippy with all features..."
@@ -25,6 +29,10 @@ clippy:
 test:
 	@echo "[TEST] Running tests with all features..."
 	cargo test --all-features --lib
+
+test-all-targets:
+	@echo "[TEST] Running tests for all targets..."
+	cargo test --all-targets --all-features
 
 # Run only doctests (may have issues with features)
 test-doc:
@@ -135,8 +143,10 @@ help:
 	@echo "[HELP] Available targets:"
 	@echo "  check-release  - Run all release quality checks (default)"
 	@echo "  check          - Run cargo check with all features"
+	@echo "  check-all-targets - Run cargo check for all targets"
 	@echo "  clippy         - Run clippy linter with all features"
 	@echo "  test           - Run unit tests with all features"
+	@echo "  test-all-targets - Run tests for all targets"
 	@echo "  test-doc       - Run doctests (may have feature issues)"
 	@echo "  test-features  - Test with different feature combinations"
 	@echo "  doc            - Generate documentation"
