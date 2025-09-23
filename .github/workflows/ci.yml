@@ -19,4 +19,4 @@ jobs:
       - name: cargo test
         run: cargo test --all --locked --all-features
       - name: cargo clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warnings
