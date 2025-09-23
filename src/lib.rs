@@ -10,16 +10,14 @@
 /// The AST module provides a generic AST structure. See [`ast::generic`] for more details.
 pub mod ast;
 
-/// Specialized AST types for common use cases like element IDs and source tracking.
+/// Specialized AST types for element identification.
 ///
 /// This module provides pre-defined specialized versions of the generic AST
-/// for scenarios like element identification and source location tracking.
+/// for element identification scenarios.
 ///
 /// # Available modules
 ///
 /// - `element_id` - Element ID support and related functionality
-/// - `source_info` - Source location tracking
-/// - `element_data` - Combined element ID and source information
 /// - `type_aliases` - Convenient type aliases for specialized AST types
 /// - `utilities` - Helper functions and utilities
 #[cfg(feature = "ast-specialized")]

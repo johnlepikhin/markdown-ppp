@@ -2,6 +2,27 @@
 //!
 //! This module provides helper functions and utilities for common operations
 //! with specialized AST types.
+//!
+//! # Example
+//!
+//! ```rust
+//! use markdown_ppp::ast_specialized::utilities::id_utils;
+//! use markdown_ppp::ast::{Document, Block, Heading, HeadingKind, Inline};
+//!
+//! // Create a regular document
+//! let doc = Document {
+//!     blocks: vec![
+//!         Block::Heading(Heading {
+//!             kind: HeadingKind::Atx(1),
+//!             content: vec![Inline::Text("Title".to_string())],
+//!         })
+//!     ],
+//! };
+//!
+//! // Add IDs to all elements
+//! let doc_with_ids = id_utils::add_ids_to_document(doc);
+//! println!("Document ID: {}", doc_with_ids.user_data.id());
+//! ```
 
 use super::element_id::IdGenerator;
 use super::type_aliases::with_ids;

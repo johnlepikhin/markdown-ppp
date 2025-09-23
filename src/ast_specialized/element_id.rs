@@ -2,6 +2,25 @@
 //!
 //! This module provides [`ElementId`] type for uniquely identifying AST elements
 //! and related functionality like ID generation.
+//!
+//! # Example
+//!
+//! ```rust
+//! use markdown_ppp::ast_specialized::element_id::{ElementId, IdGenerator};
+//!
+//! // Create element IDs
+//! let id1 = ElementId::new(42);
+//! let id2 = ElementId::from(100);
+//!
+//! // Generate sequential IDs
+//! let mut generator = IdGenerator::new();
+//! let id_a = generator.generate(); // ElementId(1)
+//! let id_b = generator.generate(); // ElementId(2)
+//!
+//! // Start from specific value
+//! let mut custom_gen = IdGenerator::starting_from(1000);
+//! let id_custom = custom_gen.generate(); // ElementId(1000)
+//! ```
 
 /// Unique identifier for an AST element
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]

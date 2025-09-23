@@ -2,6 +2,30 @@
 //!
 //! This module provides convenient type aliases for generic AST types
 //! specialized with element IDs.
+//!
+//! # Example
+//!
+//! ```rust
+//! use markdown_ppp::ast_specialized::{with_ids, ElementId};
+//! use markdown_ppp::ast::generic;
+//!
+//! // Use type aliases for cleaner code
+//! let doc: with_ids::Document = generic::Document {
+//!     blocks: vec![
+//!         generic::Block::Heading(generic::Heading {
+//!             kind: markdown_ppp::ast::HeadingKind::Atx(1),
+//!             content: vec![
+//!                 generic::Inline::Text {
+//!                     content: "Hello".to_string(),
+//!                     user_data: ElementId::new(1),
+//!                 }
+//!             ],
+//!             user_data: ElementId::new(2),
+//!         })
+//!     ],
+//!     user_data: ElementId::new(0),
+//! };
+//! ```
 
 use super::ElementId;
 use crate::ast::generic;
