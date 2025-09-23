@@ -2,6 +2,7 @@
 [![docs.rs](https://docs.rs/markdown-ppp/badge.svg)](https://docs.rs/markdown-ppp)
 [![CI](https://github.com/johnlepikhin/markdown-ppp/actions/workflows/ci.yml/badge.svg)](https://github.com/johnlepikhin/markdown-ppp/actions)
 [![License: MIT](https://img.shields.io/crates/l/markdown-ppp.svg)](https://github.com/johnlepikhin/markdown-ppp/blob/main/LICENSE)
+![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/johnlepikhin/markdown-ppp)
 
 # markdown-ppp
 
