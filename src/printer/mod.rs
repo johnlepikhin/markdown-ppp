@@ -59,6 +59,7 @@ mod github_alert;
 mod heading;
 mod inline;
 mod list;
+mod markdown_syntax_detector;
 mod table;
 mod tests;
 

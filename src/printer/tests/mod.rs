@@ -1,6 +1,7 @@
 #![cfg(test)]
 use rstest::rstest;
 
+mod line_wrapping_issues;
 mod list;
 mod table;
 mod text_formatting;

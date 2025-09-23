@@ -1,7 +1,7 @@
 [package]
 authors = ["Evgenii Lepikhin <johnlepikhin@gmail.com>"]
 name = "markdown-ppp"
-version = "2.7.0"
+version = "2.7.1"
 edition = "2021"
 license = "MIT"
 description = "Feature-rich Markdown Parsing and Pretty-Printing library"
@@ -19,6 +19,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 entities = { version = "1.0.1", optional = true }
 nom = { version = "8.0.0", default-features = false, features = ["alloc"], optional = true }
 pretty = { version = "0.12.4", optional = true }
+regex = { version = "1.0", optional = true }
 serde = { version = "1.0.219", features = ["serde_derive"], optional = true }
 unicode_categories = { version = "0.1.1", optional = true }
 
@@ -31,7 +32,7 @@ default = ["parser", "printer", "html-printer"]
 parser = ["entities", "nom", "unicode_categories"]
 ast-serde = ["serde"]
 ast-specialized = []
-printer = ["pretty"]
+printer = ["pretty", "regex"]
 html-printer = ["pretty"]
 latex-printer = ["pretty"]
 ast-transform = []
