@@ -38,6 +38,7 @@
 //! ```
 
 pub mod convenience;
+pub mod generic_transformer;
 pub mod pipeline;
 pub mod query;
 pub mod transformer;
@@ -47,6 +48,7 @@ pub mod visitor;
 mod tests;
 
 pub use convenience::*;
+pub use generic_transformer::*;
 pub use pipeline::*;
 pub use query::*;
 pub use transformer::*;

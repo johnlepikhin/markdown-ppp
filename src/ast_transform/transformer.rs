@@ -285,6 +285,282 @@ pub trait Transformer {
         text
     }
 
+    // ——————————————————————————————————————————————————————————————————————————
+    // Expandable transformation methods (1-to-many)
+    // ——————————————————————————————————————————————————————————————————————————
+
+    /// Transform a document with possibility to expand into multiple documents
+    ///
+    /// Default implementation delegates to the regular transform_document method
+    fn expand_document(&mut self, doc: Document) -> Vec<Document> {
+        vec![self.transform_document(doc)]
+    }
+
+    /// Transform a block with possibility to expand into multiple blocks
+    ///
+    /// This enables scenarios like:
+    /// - Split one paragraph into paragraph + list
+    /// - Expand one block into multiple blocks
+    /// - Transform one block based on content patterns
+    ///
+    /// Default implementation delegates to the regular transform_block method
+    fn expand_block(&mut self, block: Block) -> Vec<Block> {
+        vec![self.transform_block(block)]
+    }
+
+    /// Transform an inline with possibility to expand into multiple inlines
+    ///
+    /// This enables scenarios like:
+    /// - Split text into multiple text nodes
+    /// - Transform one inline element into several elements
+    /// - Expand abbreviations or macros
+    ///
+    /// Default implementation delegates to the regular transform_inline method
+    fn expand_inline(&mut self, inline: Inline) -> Vec<Inline> {
+        vec![self.transform_inline(inline)]
+    }
+
+    /// Transform a table cell with possibility to expand into multiple cells
+    fn expand_table_cell(&mut self, cell: TableCell) -> Vec<TableCell> {
+        vec![self.transform_table_cell(cell)]
+    }
+
+    /// Transform a list item with possibility to expand into multiple items
+    fn expand_list_item(&mut self, item: ListItem) -> Vec<ListItem> {
+        vec![self.transform_list_item(item)]
+    }
+
+    /// Transform a table row with possibility to expand into multiple rows
+    fn expand_table_row(&mut self, row: TableRow) -> Vec<TableRow> {
+        vec![self.transform_table_row(row)]
+    }
+
+    /// Transform a heading with possibility to expand into multiple headings
+    fn expand_heading(&mut self, heading: Heading) -> Vec<Heading> {
+        vec![self.transform_heading(heading)]
+    }
+
+    /// Transform a link with possibility to expand into multiple links
+    fn expand_link(&mut self, link: Link) -> Vec<Link> {
+        vec![self.transform_link(link)]
+    }
+
+    /// Transform an image with possibility to expand into multiple images
+    fn expand_image(&mut self, image: Image) -> Vec<Image> {
+        vec![self.transform_image(image)]
+    }
+
+    /// Transform a code block with possibility to expand into multiple code blocks
+    fn expand_code_block(&mut self, code_block: CodeBlock) -> Vec<CodeBlock> {
+        vec![self.transform_code_block(code_block)]
+    }
+
+    /// Transform text with possibility to expand into multiple text strings
+    fn expand_text(&mut self, text: String) -> Vec<String> {
+        vec![self.transform_text(text)]
+    }
+
+    /// Transform a footnote definition with possibility to expand into multiple definitions
+    fn expand_footnote_definition(
+        &mut self,
+        footnote: FootnoteDefinition,
+    ) -> Vec<FootnoteDefinition> {
+        vec![self.transform_footnote_definition(footnote)]
+    }
+
+    /// Transform a GitHub alert with possibility to expand into multiple alerts
+    fn expand_github_alert(&mut self, alert: GitHubAlert) -> Vec<GitHubAlert> {
+        vec![self.transform_github_alert(alert)]
+    }
+
+    // ——————————————————————————————————————————————————————————————————————————
+    // Walk methods for expandable transformations
+    // ——————————————————————————————————————————————————————————————————————————
+
+    /// Walk document with expandable transformations
+    ///
+    /// Use this when you want to apply expandable transformations with the default
+    /// behavior of using expand_* methods for child nodes.
+    fn walk_expand_document(&mut self, mut doc: Document) -> Vec<Document> {
+        doc.blocks = doc
+            .blocks
+            .into_iter()
+            .flat_map(|block| self.walk_expand_block(block))
+            .collect();
+        vec![doc]
+    }
+
+    /// Walk block with expandable transformations
+    ///
+    /// Override this method to implement custom expandable block transformations.
+    /// By default, delegates to transform_block (1-to-1 transformation) but processes
+    /// child nodes with expandable transformations.
+    fn walk_expand_block(&mut self, block: Block) -> Vec<Block> {
+        match block {
+            Block::Paragraph(inlines) => {
+                let expanded_inlines: Vec<Inline> = inlines
+                    .into_iter()
+                    .flat_map(|inline| self.walk_expand_inline(inline))
+                    .collect();
+                vec![Block::Paragraph(expanded_inlines)]
+            }
+            Block::Heading(mut heading) => {
+                heading.content = heading
+                    .content
+                    .into_iter()
+                    .flat_map(|inline| self.walk_expand_inline(inline))
+                    .collect();
+                vec![Block::Heading(heading)]
+            }
+            Block::BlockQuote(blocks) => {
+                let expanded_blocks: Vec<Block> = blocks
+                    .into_iter()
+                    .flat_map(|block| self.walk_expand_block(block))
+                    .collect();
+                vec![Block::BlockQuote(expanded_blocks)]
+            }
+            Block::List(mut list) => {
+                list.items = list
+                    .items
+                    .into_iter()
+                    .flat_map(|item| self.walk_expand_list_item(item))
+                    .collect();
+                vec![Block::List(list)]
+            }
+            Block::Table(mut table) => {
+                table.rows = table
+                    .rows
+                    .into_iter()
+                    .flat_map(|row| self.walk_expand_table_row(row))
+                    .collect();
+                vec![Block::Table(table)]
+            }
+            Block::FootnoteDefinition(mut footnote) => {
+                footnote.blocks = footnote
+                    .blocks
+                    .into_iter()
+                    .flat_map(|block| self.walk_expand_block(block))
+                    .collect();
+                vec![Block::FootnoteDefinition(footnote)]
+            }
+            Block::GitHubAlert(mut alert) => {
+                alert.blocks = alert
+                    .blocks
+                    .into_iter()
+                    .flat_map(|block| self.walk_expand_block(block))
+                    .collect();
+                vec![Block::GitHubAlert(alert)]
+            }
+            Block::Definition(mut def) => {
+                def.label = def
+                    .label
+                    .into_iter()
+                    .flat_map(|inline| self.walk_expand_inline(inline))
+                    .collect();
+                vec![Block::Definition(def)]
+            }
+            // Terminal nodes - no transformation needed
+            other => vec![self.transform_block(other)],
+        }
+    }
+
+    /// Walk inline with expandable transformations
+    ///
+    /// Override this method to implement custom expandable inline transformations.
+    /// By default, delegates to transform_inline (1-to-1 transformation).
+    fn walk_expand_inline(&mut self, inline: Inline) -> Vec<Inline> {
+        vec![self.transform_inline(inline)]
+    }
+
+    /// Walk table cell with expandable transformations
+    fn walk_expand_table_cell(&mut self, cell: TableCell) -> Vec<TableCell> {
+        let expanded_cell = cell
+            .into_iter()
+            .flat_map(|inline| self.expand_inline(inline))
+            .collect();
+        vec![expanded_cell]
+    }
+
+    /// Walk list item with expandable transformations
+    fn walk_expand_list_item(&mut self, mut item: ListItem) -> Vec<ListItem> {
+        item.blocks = item
+            .blocks
+            .into_iter()
+            .flat_map(|block| self.expand_block(block))
+            .collect();
+        vec![item]
+    }
+
+    /// Walk table row with expandable transformations
+    fn walk_expand_table_row(&mut self, row: TableRow) -> Vec<TableRow> {
+        let expanded_row = row
+            .into_iter()
+            .flat_map(|cell| self.expand_table_cell(cell))
+            .collect();
+        vec![expanded_row]
+    }
+
+    /// Walk heading with expandable transformations
+    fn walk_expand_heading(&mut self, mut heading: Heading) -> Vec<Heading> {
+        heading.content = heading
+            .content
+            .into_iter()
+            .flat_map(|inline| self.expand_inline(inline))
+            .collect();
+        vec![heading]
+    }
+
+    /// Walk link with expandable transformations
+    fn walk_expand_link(&mut self, mut link: Link) -> Vec<Link> {
+        link.children = link
+            .children
+            .into_iter()
+            .flat_map(|inline| self.expand_inline(inline))
+            .collect();
+        vec![link]
+    }
+
+    /// Walk image with expandable transformations
+    fn walk_expand_image(&mut self, image: Image) -> Vec<Image> {
+        // Images are terminal nodes
+        vec![image]
+    }
+
+    /// Walk code block with expandable transformations
+    fn walk_expand_code_block(&mut self, code_block: CodeBlock) -> Vec<CodeBlock> {
+        // Code blocks are terminal nodes
+        vec![code_block]
+    }
+
+    /// Walk text with expandable transformations
+    fn walk_expand_text(&mut self, text: String) -> Vec<String> {
+        // Text is a terminal node
+        vec![text]
+    }
+
+    /// Walk footnote definition with expandable transformations
+    fn walk_expand_footnote_definition(
+        &mut self,
+        mut footnote: FootnoteDefinition,
+    ) -> Vec<FootnoteDefinition> {
+        footnote.blocks = footnote
+            .blocks
+            .into_iter()
+            .flat_map(|block| self.expand_block(block))
+            .collect();
+        vec![footnote]
+    }
+
+    /// Walk GitHub alert with expandable transformations
+    fn walk_expand_github_alert(&mut self, mut alert: GitHubAlert) -> Vec<GitHubAlert> {
+        alert.blocks = alert
+            .blocks
+            .into_iter()
+            .flat_map(|block| self.expand_block(block))
+            .collect();
+        vec![alert]
+    }
+
     /// Default transformation for footnote definitions
     fn walk_transform_footnote_definition(
         &mut self,
@@ -330,6 +606,32 @@ impl TransformWith for Block {
 impl TransformWith for Inline {
     fn transform_with<T: Transformer>(self, transformer: &mut T) -> Self {
         transformer.transform_inline(self)
+    }
+}
+
+/// Extension trait for expandable transformations
+pub trait ExpandWith {
+    /// Apply an expandable transformer to this AST node, returning multiple nodes
+    fn expand_with<T: Transformer>(self, transformer: &mut T) -> Vec<Self>
+    where
+        Self: Sized;
+}
+
+impl ExpandWith for Document {
+    fn expand_with<T: Transformer>(self, transformer: &mut T) -> Vec<Self> {
+        transformer.walk_expand_document(self)
+    }
+}
+
+impl ExpandWith for Block {
+    fn expand_with<T: Transformer>(self, transformer: &mut T) -> Vec<Self> {
+        transformer.walk_expand_block(self)
+    }
+}
+
+impl ExpandWith for Inline {
+    fn expand_with<T: Transformer>(self, transformer: &mut T) -> Vec<Self> {
+        transformer.walk_expand_inline(self)
     }
 }
 

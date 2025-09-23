@@ -17,7 +17,7 @@ It provides a clean, well-structured Abstract Syntax Tree (AST) for parsed docum
 - **Pretty-printing and processing** — Build, modify, and reformat Markdown easily.
 - **Render to HTML** — Convert Markdown AST to HTML.
 - **Render to LaTeX** — Convert Markdown AST to LaTeX with configurable styles.
-- **AST Transformation** — Comprehensive toolkit for modifying, querying, and transforming parsed documents.
+- **AST Transformation** — Comprehensive toolkit for modifying, querying, and transforming parsed documents with support for 1-to-many expandable transformations and generic AST with user data.
 - **GitHub Alerts** — Native support for GitHub-style markdown alerts ([!NOTE], [!TIP], [!WARNING], etc.).
 - **Modular design** — You can disable parsing entirely and use only the AST types.
 
@@ -270,7 +270,7 @@ This module is particularly useful for:
 
 ## 🔄 AST Transformation
 
-The `ast_transform` module provides a comprehensive toolkit for modifying, querying, and transforming parsed Markdown documents. This feature is disabled by default and must be enabled via the `ast-transform` feature.
+The `ast_transform` module provides a comprehensive toolkit for modifying, querying, and transforming parsed Markdown documents. It supports both 1-to-1 transformations (traditional) and 1-to-many expandable transformations for advanced use cases like content splitting, duplication, or expansion. Generic AST support allows preserving user-defined metadata during transformations. This feature is disabled by default and must be enabled via the `ast-transform` feature.
 
 ### Quick Start
 
@@ -376,7 +376,96 @@ impl Transformer for CodeHighlighter {
 let doc = doc.transform_with(&mut CodeHighlighter);
 ```
 
-#### 5. **Pipeline Builder** - Complex transformations
+#### 5. **Expandable Transformations** - 1-to-many transformations
+```rust
+use markdown_ppp::ast_transform::{Transformer, ExpandWith};
+
+struct ParagraphSplitter;
+
+impl Transformer for ParagraphSplitter {
+    fn walk_expand_block(&mut self, block: Block) -> Vec<Block> {
+        match block {
+            Block::Paragraph(inlines) => {
+                // Split paragraphs at "SPLIT" markers
+                if let Some(split_pos) = inlines.iter().position(|inline| {
+                    matches!(inline, Inline::Text(text) if text.contains("SPLIT"))
+                }) {
+                    let (first_half, second_half) = inlines.split_at(split_pos);
+                    let second_half = &second_half[1..]; // Skip SPLIT marker
+
+                    vec![
+                        Block::Paragraph(first_half.to_vec()),
+                        Block::Paragraph(second_half.to_vec()),
+                    ]
+                } else {
+                    vec![Block::Paragraph(inlines)]
+                }
+            }
+            other => vec![self.transform_block(other)],
+        }
+    }
+}
+
+// Use the expandable transformer
+let mut transformer = ParagraphSplitter;
+let expanded_docs = doc.expand_with(&mut transformer); // Returns Vec<Document>
+```
+
+#### 6. **Generic AST with User Data** - Preserving metadata during transformations
+```rust
+use markdown_ppp::ast::generic::*;
+use markdown_ppp::ast_transform::{GenericTransformer, GenericExpandWith};
+
+#[derive(Debug, Clone, Default)]
+struct NodeId(u32);
+
+struct IdAssigner {
+    next_id: u32,
+}
+
+impl IdAssigner {
+    fn next_id(&mut self) -> u32 {
+        let id = self.next_id;
+        self.next_id += 1;
+        id
+    }
+}
+
+impl GenericTransformer<NodeId> for IdAssigner {
+    fn walk_expand_block(&mut self, block: Block<NodeId>) -> Vec<Block<NodeId>> {
+        match block {
+            Block::Paragraph { content, .. } => {
+                vec![Block::Paragraph {
+                    content: content.into_iter()
+                        .flat_map(|inline| self.walk_expand_inline(inline))
+                        .collect(),
+                    user_data: NodeId(self.next_id()),
+                }]
+            }
+            other => vec![self.transform_block(other)],
+        }
+    }
+
+    fn walk_expand_inline(&mut self, inline: Inline<NodeId>) -> Vec<Inline<NodeId>> {
+        match inline {
+            Inline::Text { content, .. } => {
+                vec![Inline::Text {
+                    content,
+                    user_data: NodeId(self.next_id()),
+                }]
+            }
+            other => vec![self.transform_inline(other)],
+        }
+    }
+}
+
+// Transform generic AST while preserving and updating user data
+let doc_with_ids: Document<NodeId> = /* ... */;
+let mut transformer = IdAssigner { next_id: 1 };
+let result = doc_with_ids.expand_with(&mut transformer);
+```
+
+#### 7. **Pipeline Builder** - Complex transformations
 ```rust
 use markdown_ppp::ast_transform::TransformPipeline;
 
@@ -397,7 +486,9 @@ let result = TransformPipeline::new()
 - **URL transformations**: `transform_image_urls`, `transform_link_urls`, `transform_autolink_urls`
 - **Filtering**: `remove_empty_paragraphs`, `remove_empty_text`, `filter_blocks`
 - **Normalization**: `normalize_whitespace`
-- **Custom**: `transform_with`, `transform_if`
+- **Custom 1-to-1**: `transform_with`, `transform_if`
+- **Expandable 1-to-many**: `expand_with` (via `ExpandWith` trait)
+- **Generic with user data**: `GenericTransformer<T>` and `GenericExpandWith<T>` traits
 
 ---
 
