@@ -60,9 +60,8 @@ impl TransformPipeline {
     where
         F: Fn(String) -> String + 'static,
     {
-        self.steps.push(Box::new(move |doc| {
-            crate::ast_transform::Transform::transform_text(doc, f)
-        }));
+        use crate::ast_transform::Transform;
+        self.steps.push(Box::new(move |doc| doc.transform_text(f)));
         self
     }
 
@@ -71,9 +70,9 @@ impl TransformPipeline {
     where
         F: Fn(String) -> String + 'static,
     {
-        self.steps.push(Box::new(move |doc| {
-            crate::ast_transform::Transform::transform_image_urls(doc, f)
-        }));
+        use crate::ast_transform::Transform;
+        self.steps
+            .push(Box::new(move |doc| doc.transform_image_urls(f)));
         self
     }
 
@@ -82,9 +81,9 @@ impl TransformPipeline {
     where
         F: Fn(String) -> String + 'static,
     {
-        self.steps.push(Box::new(move |doc| {
-            crate::ast_transform::Transform::transform_link_urls(doc, f)
-        }));
+        use crate::ast_transform::Transform;
+        self.steps
+            .push(Box::new(move |doc| doc.transform_link_urls(f)));
         self
     }
 
@@ -93,9 +92,9 @@ impl TransformPipeline {
     where
         F: Fn(String) -> String + 'static,
     {
-        self.steps.push(Box::new(move |doc| {
-            crate::ast_transform::Transform::transform_autolink_urls(doc, f)
-        }));
+        use crate::ast_transform::Transform;
+        self.steps
+            .push(Box::new(move |doc| doc.transform_autolink_urls(f)));
         self
     }
 
@@ -104,9 +103,8 @@ impl TransformPipeline {
     where
         F: Fn(String) -> String + 'static,
     {
-        self.steps.push(Box::new(move |doc| {
-            crate::ast_transform::Transform::transform_code(doc, f)
-        }));
+        use crate::ast_transform::Transform;
+        self.steps.push(Box::new(move |doc| doc.transform_code(f)));
         self
     }
 
@@ -115,17 +113,16 @@ impl TransformPipeline {
     where
         F: Fn(String) -> String + 'static,
     {
-        self.steps.push(Box::new(move |doc| {
-            crate::ast_transform::Transform::transform_html(doc, f)
-        }));
+        use crate::ast_transform::Transform;
+        self.steps.push(Box::new(move |doc| doc.transform_html(f)));
         self
     }
 
     /// Apply a custom transformer
     pub fn transform_with<T: Transformer + 'static>(mut self, transformer: T) -> Self {
-        self.steps.push(Box::new(move |doc| {
-            crate::ast_transform::Transform::transform_with(doc, transformer)
-        }));
+        use crate::ast_transform::Transform;
+        self.steps
+            .push(Box::new(move |doc| doc.transform_with(transformer)));
         self
     }
 
@@ -170,25 +167,23 @@ impl TransformPipeline {
 
     /// Remove empty paragraphs
     pub fn remove_empty_paragraphs(mut self) -> Self {
-        self.steps.push(Box::new(|doc| {
-            crate::ast_transform::FilterTransform::remove_empty_paragraphs(doc)
-        }));
+        use crate::ast_transform::FilterTransform;
+        self.steps
+            .push(Box::new(|doc| doc.remove_empty_paragraphs()));
         self
     }
 
     /// Remove empty text elements
     pub fn remove_empty_text(mut self) -> Self {
-        self.steps.push(Box::new(|doc| {
-            crate::ast_transform::FilterTransform::remove_empty_text(doc)
-        }));
+        use crate::ast_transform::FilterTransform;
+        self.steps.push(Box::new(|doc| doc.remove_empty_text()));
         self
     }
 
     /// Normalize whitespace
     pub fn normalize_whitespace(mut self) -> Self {
-        self.steps.push(Box::new(|doc| {
-            crate::ast_transform::FilterTransform::normalize_whitespace(doc)
-        }));
+        use crate::ast_transform::FilterTransform;
+        self.steps.push(Box::new(|doc| doc.normalize_whitespace()));
         self
     }
 
@@ -197,9 +192,9 @@ impl TransformPipeline {
     where
         F: Fn(&Block) -> bool + 'static,
     {
-        self.steps.push(Box::new(move |doc| {
-            crate::ast_transform::FilterTransform::filter_blocks(doc, predicate)
-        }));
+        use crate::ast_transform::FilterTransform;
+        self.steps
+            .push(Box::new(move |doc| doc.filter_blocks(predicate)));
         self
     }
 
@@ -228,48 +223,6 @@ pub trait PipeExt {
     {
         f(self)
     }
-
-    /// Compose two functions
-    fn compose<F, G, R>(self, f: F, g: G) -> R
-    where
-        F: FnOnce(Self) -> R,
-        G: FnOnce(R) -> R,
-        Self: Sized,
-    {
-        g(f(self))
-    }
 }
 
 impl PipeExt for Document {}
-
-/// Macro for creating transformation pipelines with a more functional syntax
-///
-/// # Example
-///
-/// ```rust
-/// use markdown_ppp::ast::*;
-/// use markdown_ppp::ast_transform::*;
-/// use markdown_ppp::pipeline;
-///
-/// let original_doc = Document {
-///     blocks: vec![Block::Paragraph(vec![Inline::Text("  hello  ".to_string())])],
-/// };
-///
-/// let result = pipeline! {
-///     original_doc =>
-///     |d: Document| d.transform_text(|s| s.trim().to_string()),
-///     |d: Document| d.normalize_whitespace(),
-/// };
-/// ```
-#[macro_export]
-macro_rules! pipeline {
-    ($doc:expr => $($transform:expr),* $(,)?) => {{
-        let mut doc = $doc;
-        $(
-            doc = $transform(doc);
-        )*
-        doc
-    }};
-}
-
-pub use pipeline;

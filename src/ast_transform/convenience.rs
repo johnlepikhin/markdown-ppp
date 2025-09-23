@@ -106,9 +106,10 @@ pub trait Transform {
     /// Apply a custom transformer
     fn transform_with<T: Transformer>(self, transformer: T) -> Self;
 
-    /// Transform conditionally based on a predicate
-    fn transform_if<F>(self, condition: bool, transform: F) -> Self
+    /// Transform conditionally based on a document predicate
+    fn transform_if_doc<P, F>(self, predicate: P, transform: F) -> Self
     where
+        P: Fn(&Self) -> bool,
         F: FnOnce(Self) -> Self,
         Self: Sized;
 }
@@ -166,11 +167,12 @@ impl Transform for Document {
         transformer.transform_document(self)
     }
 
-    fn transform_if<F>(self, condition: bool, transform: F) -> Self
+    fn transform_if_doc<P, F>(self, predicate: P, transform: F) -> Self
     where
+        P: Fn(&Self) -> bool,
         F: FnOnce(Self) -> Self,
     {
-        if condition {
+        if predicate(&self) {
             transform(self)
         } else {
             self

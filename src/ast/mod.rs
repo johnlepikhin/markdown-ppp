@@ -201,7 +201,10 @@ pub enum CodeBlockKind {
     Indented,
 
     /// Fenced block with *optional* info string (language, etc.).
-    Fenced { info: Option<String> },
+    Fenced {
+        /// Optional info string containing language identifier and other metadata
+        info: Option<String>,
+    },
 }
 
 // ——————————————————————————————————————————————————————————————————————————

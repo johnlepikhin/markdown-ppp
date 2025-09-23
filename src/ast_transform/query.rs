@@ -85,6 +85,105 @@ pub trait Query {
     {
         self.find_first_block(predicate).is_some()
     }
+
+    /// Find all links in the document
+    fn find_all_links(&self) -> Vec<&Link> {
+        self.find_all_inlines(|inline| matches!(inline, Inline::Link(_)))
+            .into_iter()
+            .filter_map(|inline| match inline {
+                Inline::Link(link) => Some(link),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Find all images in the document
+    fn find_all_images(&self) -> Vec<&Image> {
+        self.find_all_inlines(|inline| matches!(inline, Inline::Image(_)))
+            .into_iter()
+            .filter_map(|inline| match inline {
+                Inline::Image(image) => Some(image),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Find all headings in the document
+    fn find_all_headings(&self) -> Vec<&Heading> {
+        self.find_all_blocks(|block| matches!(block, Block::Heading(_)))
+            .into_iter()
+            .filter_map(|block| match block {
+                Block::Heading(heading) => Some(heading),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Find all autolinks in the document
+    fn find_all_autolinks(&self) -> Vec<&str> {
+        self.find_all_inlines(|inline| matches!(inline, Inline::Autolink(_)))
+            .into_iter()
+            .filter_map(|inline| match inline {
+                Inline::Autolink(url) => Some(url.as_str()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Find all text nodes in the document
+    fn find_all_text(&self) -> Vec<&str> {
+        self.find_all_inlines(|inline| matches!(inline, Inline::Text(_)))
+            .into_iter()
+            .filter_map(|inline| match inline {
+                Inline::Text(text) => Some(text.as_str()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Find all code spans in the document
+    fn find_all_code_spans(&self) -> Vec<&str> {
+        self.find_all_inlines(|inline| matches!(inline, Inline::Code(_)))
+            .into_iter()
+            .filter_map(|inline| match inline {
+                Inline::Code(code) => Some(code.as_str()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Find all code blocks in the document
+    fn find_all_code_blocks(&self) -> Vec<&CodeBlock> {
+        self.find_all_blocks(|block| matches!(block, Block::CodeBlock(_)))
+            .into_iter()
+            .filter_map(|block| match block {
+                Block::CodeBlock(code_block) => Some(code_block),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Find all tables in the document
+    fn find_all_tables(&self) -> Vec<&Table> {
+        self.find_all_blocks(|block| matches!(block, Block::Table(_)))
+            .into_iter()
+            .filter_map(|block| match block {
+                Block::Table(table) => Some(table),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Find all lists in the document
+    fn find_all_lists(&self) -> Vec<&List> {
+        self.find_all_blocks(|block| matches!(block, Block::List(_)))
+            .into_iter()
+            .filter_map(|block| match block {
+                Block::List(list) => Some(list),
+                _ => None,
+            })
+            .collect()
+    }
 }
 
 impl Query for Document {

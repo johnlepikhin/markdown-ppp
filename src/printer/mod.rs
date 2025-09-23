@@ -43,10 +43,11 @@
 //!
 //! ```rust
 //! use markdown_ppp::printer::{render_markdown, config::Config};
-//! use markdown_ppp::ast::Document;
+//! use markdown_ppp::ast::{Document, Block, Inline};
 //!
 //! let config = Config::default().with_width(120);
-//! let markdown = render_markdown(&Document::default(), config);
+//! let doc = Document { blocks: vec![Block::Paragraph(vec![Inline::Text("Hello".to_string())])] };
+//! let markdown = render_markdown(&doc, config);
 //! ```
 
 mod block;

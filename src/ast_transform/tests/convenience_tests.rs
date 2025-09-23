@@ -230,19 +230,19 @@ fn test_transform_with_custom_transformer() {
 }
 
 #[test]
-fn test_transform_if() {
+fn test_transform_if_doc() {
     let doc = create_test_doc();
 
-    // Should transform when condition is true
+    // Should transform when predicate returns true
     let result1 = doc
         .clone()
-        .transform_if(true, |d| d.transform_text(|s| s.to_uppercase()));
+        .transform_if_doc(|_| true, |d| d.transform_text(|s| s.to_uppercase()));
     if let Block::Paragraph(inlines) = &result1.blocks[0] {
         assert_eq!(inlines[0], Inline::Text("HELLO ".to_string()));
     }
 
-    // Should not transform when condition is false
-    let result2 = doc.transform_if(false, |d| d.transform_text(|s| s.to_uppercase()));
+    // Should not transform when predicate returns false
+    let result2 = doc.transform_if_doc(|_| false, |d| d.transform_text(|s| s.to_uppercase()));
     if let Block::Paragraph(inlines) = &result2.blocks[0] {
         assert_eq!(inlines[0], Inline::Text("Hello ".to_string()));
     }

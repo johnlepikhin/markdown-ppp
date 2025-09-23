@@ -35,7 +35,7 @@
 //! The parser behavior can be extensively customized using configuration:
 //!
 //! ```rust
-//! use markdown_ppp::parser::config::*;
+//! use markdown_ppp::parser::{MarkdownParserState, config::*};
 //!
 //! let config = MarkdownParserConfig::default()
 //!     .with_block_thematic_break_behavior(ElementBehavior::Skip)

@@ -36,7 +36,7 @@
 //! let config = Config::default();
 //! let html = render_html(&doc, config);
 //! assert!(html.contains("<h1>Hello World</h1>"));
-//! assert!(html.contains("<strong>bold</strong>"));
+//! assert!(html.contains("<b>bold</b>"));
 //! ```
 //!
 //! # Configuration
@@ -45,10 +45,11 @@
 //!
 //! ```rust
 //! use markdown_ppp::html_printer::{render_html, config::Config};
-//! use markdown_ppp::ast::Document;
+//! use markdown_ppp::ast::{Document, Block, Inline};
 //!
 //! let config = Config::default();
-//! let html = render_html(&Document::default(), config);
+//! let doc = Document { blocks: vec![Block::Paragraph(vec![Inline::Text("Hello".to_string())])] };
+//! let html = render_html(&doc, config);
 //! ```
 
 mod block;

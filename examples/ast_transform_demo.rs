@@ -86,12 +86,14 @@ More text with ENV_VAR and OTHER_VAR variables.
     let is_production = true;
     let _conditional_doc = doc
         .clone()
-        .transform_if(is_production, |d| {
-            d.transform_image_urls(|url| format!("https://production-cdn.com{url}"))
-        })
-        .transform_if(!is_production, |d| {
-            d.transform_image_urls(|url| format!("https://dev-cdn.com{url}"))
-        });
+        .transform_if_doc(
+            |_| is_production,
+            |d| d.transform_image_urls(|url| format!("https://production-cdn.com{url}")),
+        )
+        .transform_if_doc(
+            |_| !is_production,
+            |d| d.transform_image_urls(|url| format!("https://dev-cdn.com{url}")),
+        );
 
     println!("✓ Applied conditional transformations");
 
@@ -160,7 +162,8 @@ More text with ENV_VAR and OTHER_VAR variables.
         .clone()
         .pipe(|d| d.transform_text(|s| s.to_lowercase()))
         .pipe(|d| d.transform_image_urls(|url| format!("optimized/{url}")))
-        .compose(|d| d.normalize_whitespace(), |d| d.remove_empty_text());
+        .pipe(|d| d.normalize_whitespace())
+        .pipe(|d| d.remove_empty_text());
 
     println!("✓ Applied functional pipeline transformations");
 
