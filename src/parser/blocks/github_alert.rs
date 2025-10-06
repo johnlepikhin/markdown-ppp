@@ -2,22 +2,44 @@ use crate::ast::{Block, GitHubAlert, GitHubAlertType};
 use crate::parser::util::*;
 use crate::parser::MarkdownParserState;
 use nom::{
-    character::complete::char,
-    combinator::opt,
-    multi::{many1, many_m_n},
-    sequence::preceded,
+    branch::alt,
+    bytes::complete::tag,
+    character::complete::{alpha1, char, satisfy},
+    combinator::{opt, recognize},
+    multi::{many0, many1, many_m_n},
+    sequence::{delimited, pair, preceded},
     IResult, Parser,
 };
 use std::rc::Rc;
 
+/// Parse custom alert name (must start with letter, contain only letters, digits, underscores)
+fn parse_custom_alert_name(input: &str) -> IResult<&str, &str> {
+    recognize(pair(
+        alpha1,
+        many0(satisfy(|c| c.is_ascii_alphanumeric() || c == '_')),
+    ))
+    .parse(input)
+}
+
 /// Parse alert type from marker text (e.g., "[!NOTE]" -> Some(Note))
 fn parse_alert_marker(marker: &str) -> Option<GitHubAlertType> {
-    match marker.trim().to_uppercase().as_str() {
-        "[!NOTE]" => Some(GitHubAlertType::Note),
-        "[!TIP]" => Some(GitHubAlertType::Tip),
-        "[!IMPORTANT]" => Some(GitHubAlertType::Important),
-        "[!WARNING]" => Some(GitHubAlertType::Warning),
-        "[!CAUTION]" => Some(GitHubAlertType::Caution),
+    let trimmed = marker.trim().to_uppercase();
+
+    let mut parser = delimited(
+        tag("[!"),
+        alt((
+            tag("NOTE").map(|_| GitHubAlertType::Note),
+            tag("TIP").map(|_| GitHubAlertType::Tip),
+            tag("IMPORTANT").map(|_| GitHubAlertType::Important),
+            tag("WARNING").map(|_| GitHubAlertType::Warning),
+            tag("CAUTION").map(|_| GitHubAlertType::Caution),
+            parse_custom_alert_name.map(|name| GitHubAlertType::Custom(name.to_string())),
+        )),
+        tag("]"),
+    );
+
+    match parser.parse(&trimmed) {
+        Ok(("", alert_type)) => Some(alert_type),
         _ => None,
     }
 }

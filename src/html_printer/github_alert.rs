@@ -4,13 +4,14 @@ use pretty::{Arena, DocAllocator, DocBuilder};
 
 impl GitHubAlertType {
     /// Get the title for the alert type for HTML rendering
-    pub(crate) fn html_title(&self) -> &'static str {
+    pub(crate) fn html_title(&self) -> String {
         match self {
-            GitHubAlertType::Note => "Note",
-            GitHubAlertType::Tip => "Tip",
-            GitHubAlertType::Important => "Important",
-            GitHubAlertType::Warning => "Warning",
-            GitHubAlertType::Caution => "Caution",
+            GitHubAlertType::Note => "Note".to_owned(),
+            GitHubAlertType::Tip => "Tip".to_owned(),
+            GitHubAlertType::Important => "Important".to_owned(),
+            GitHubAlertType::Warning => "Warning".to_owned(),
+            GitHubAlertType::Caution => "Caution".to_owned(),
+            GitHubAlertType::Custom(s) => s.clone(),
         }
     }
 
@@ -22,6 +23,7 @@ impl GitHubAlertType {
             GitHubAlertType::Important => "markdown-alert markdown-alert-important",
             GitHubAlertType::Warning => "markdown-alert markdown-alert-warning",
             GitHubAlertType::Caution => "markdown-alert markdown-alert-caution",
+            GitHubAlertType::Custom(_) => "markdown-alert markdown-alert-custom",
         }
     }
 
@@ -42,6 +44,9 @@ impl GitHubAlertType {
             }
             GitHubAlertType::Caution => {
                 r#"<svg class="octicon octicon-stop mr-2" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>"#
+            }
+            GitHubAlertType::Custom(_) => {
+                r#"<svg class="octicon octicon-info mr-2" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>"#
             }
         }
     }

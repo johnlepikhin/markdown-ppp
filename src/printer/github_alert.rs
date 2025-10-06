@@ -5,13 +5,14 @@ use std::rc::Rc;
 
 impl GitHubAlertType {
     /// Get the lowercase name of the alert type for markdown output
-    pub(crate) fn as_markdown_str(&self) -> &'static str {
+    pub(crate) fn as_markdown_str(&self) -> &str {
         match self {
             GitHubAlertType::Note => "note",
             GitHubAlertType::Tip => "tip",
             GitHubAlertType::Important => "important",
             GitHubAlertType::Warning => "warning",
             GitHubAlertType::Caution => "caution",
+            GitHubAlertType::Custom(s) => s.as_str(),
         }
     }
 }

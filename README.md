@@ -29,7 +29,7 @@ rendering Markdown.
    transforming parsed documents with support for 1-to-many expandable
    transformations and generic AST with user data.
  - **GitHub Alerts** — Native support for GitHub-style markdown alerts ([!NOTE],
-   [!TIP], [!WARNING], etc.).
+   [!TIP], [!WARNING], etc.). Custom alert types are also supported.
  - **Modular design** — You can disable parsing entirely and use only the AST
    types.
 

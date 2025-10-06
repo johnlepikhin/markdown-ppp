@@ -1,5 +1,5 @@
 /// GitHub markdown alerts types
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "ast-serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum GitHubAlertType {
     /// Blue note alert
@@ -12,6 +12,8 @@ pub enum GitHubAlertType {
     Warning,
     /// Red caution alert
     Caution,
+    /// Custom alert with a user-defined label
+    Custom(String),
 }
 
 /// GitHub alert block

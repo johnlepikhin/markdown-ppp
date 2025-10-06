@@ -91,11 +91,12 @@ impl<'a> ToDoc<'a> for Block {
             Block::GitHubAlert(alert) => {
                 // Render GitHub alerts as footnotes for now
                 let alert_type = match alert.alert_type {
-                    GitHubAlertType::Note => "Note",
-                    GitHubAlertType::Tip => "Tip",
-                    GitHubAlertType::Important => "Important",
-                    GitHubAlertType::Warning => "Warning",
-                    GitHubAlertType::Caution => "Caution",
+                    GitHubAlertType::Note => "Note".to_owned(),
+                    GitHubAlertType::Tip => "Tip".to_owned(),
+                    GitHubAlertType::Important => "Important".to_owned(),
+                    GitHubAlertType::Warning => "Warning".to_owned(),
+                    GitHubAlertType::Caution => "Caution".to_owned(),
+                    GitHubAlertType::Custom(ref s) => s.clone(),
                 };
 
                 command(
