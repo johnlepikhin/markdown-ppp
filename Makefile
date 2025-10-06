@@ -1,12 +1,12 @@
 # Makefile for markdown-ppp release checks and development tasks
 
-.PHONY: all check-release check test clippy doc fmt fmt-check build build-release clean help
+.PHONY: all check-release check test clippy doc fmt fmt-check fmt-readme build build-release clean help
 
 # Default target
 all: check-release
 
 # Main release check target - runs all quality checks
-check-release: fmt-check check clippy test doc-strict build-release
+check-release: fmt-check fmt-readme check clippy test doc-strict build-release
 	@echo "[OK] All release checks passed!"
 
 # Individual check targets
@@ -47,6 +47,10 @@ fmt:
 fmt-check:
 	@echo "[FMT] Checking code formatting..."
 	cargo fmt --check
+
+fmt-readme:
+	@echo "[FMT] Formatting README.md..."
+	markdown-tool format ./README.md
 
 build:
 	@echo "[BUILD] Building in debug mode with all features..."
@@ -143,6 +147,7 @@ help:
 	@echo "  doc-strict     - Generate documentation with strict checks"
 	@echo "  fmt            - Format code"
 	@echo "  fmt-check      - Check code formatting"
+	@echo "  fmt-readme     - Format README.md"
 	@echo "  build          - Build in debug mode"
 	@echo "  build-release  - Build in release mode"
 	@echo "  pre-release    - Comprehensive pre-release checks"
