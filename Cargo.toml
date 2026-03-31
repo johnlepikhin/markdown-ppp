@@ -28,13 +28,14 @@ rstest = "0.25"
 serde_json = "1.0"
 
 [features]
-default = ["parser", "printer", "html-printer"]
+default = ["parser", "printer", "html-printer", "plaintext-printer"]
 parser = ["entities", "nom", "unicode_categories"]
 ast-serde = ["serde"]
 ast-specialized = []
 printer = ["pretty", "regex"]
 html-printer = ["pretty"]
 latex-printer = ["pretty"]
+plaintext-printer = ["pretty"]
 ast-transform = []
 
 [[example]]

@@ -47,6 +47,12 @@ pub mod html_printer;
 #[cfg(feature = "latex-printer")]
 pub mod latex_printer;
 
+/// Plaintext renderer for converting Markdown AST to plain text.
+///
+/// Render AST to plaintext using [`render_plaintext`](plaintext_printer::render_plaintext).
+#[cfg(feature = "plaintext-printer")]
+pub mod plaintext_printer;
+
 /// AST transformation utilities for manipulating parsed Markdown.
 #[cfg(feature = "ast-transform")]
 pub mod ast_transform;
