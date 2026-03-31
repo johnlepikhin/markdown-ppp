@@ -84,7 +84,7 @@ pub(crate) struct State<'a> {
 
 impl State<'_> {
     pub fn new(config: crate::html_printer::config::Config, ast: &Document) -> Self {
-        let (footnote_index, link_definitions) = crate::html_printer::index::get_indicies(ast);
+        let (footnote_index, link_definitions) = crate::html_printer::index::get_indices(ast);
         let arena = Arena::new();
         Self {
             arena,
@@ -98,7 +98,7 @@ impl State<'_> {
         self.footnote_index.get(label)
     }
 
-    pub fn get_link_definition(&self, label: &Vec<Inline>) -> Option<&LinkDefinition> {
+    pub fn get_link_definition(&self, label: &[Inline]) -> Option<&LinkDefinition> {
         self.link_definitions.get(label)
     }
 }
@@ -166,8 +166,8 @@ pub fn render_html(ast: &Document, config: crate::html_printer::config::Config) 
     let doc = ast.to_doc(&state);
 
     let mut buf = Vec::new();
-    doc.render(state.config.width, &mut buf).unwrap();
-    String::from_utf8(buf).unwrap()
+    doc.render(state.config.width, &mut buf).expect("Vec<u8> write is infallible");
+    String::from_utf8(buf).expect("pretty crate always produces valid UTF-8")
 }
 
 trait ToDoc<'a> {

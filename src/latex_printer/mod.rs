@@ -105,7 +105,8 @@ impl State<'_> {
     /// This processes the AST to build indices for footnotes and link definitions,
     /// which are needed for proper cross-referencing during rendering.
     pub fn new(config: crate::latex_printer::config::Config, ast: &Document) -> Self {
-        let (footnote_index, link_definitions) = get_indices(ast);
+        let footnote_index = crate::ast::index::get_footnote_indices(ast);
+        let link_definitions = crate::ast::index::get_link_definitions(ast);
         let arena = Arena::new();
         Self {
             arena,
@@ -125,7 +126,7 @@ impl State<'_> {
     /// Get the link definition for a reference link
     ///
     /// Returns `None` if the link reference is not defined in the document.
-    pub fn get_link_definition(&self, label: &Vec<Inline>) -> Option<&LinkDefinition> {
+    pub fn get_link_definition(&self, label: &[Inline]) -> Option<&LinkDefinition> {
         self.link_definitions.get(label)
     }
 }
@@ -201,8 +202,8 @@ pub fn render_latex(ast: &Document, config: crate::latex_printer::config::Config
     let doc = ast.to_doc(&state);
 
     let mut buf = Vec::new();
-    doc.render(state.config.width, &mut buf).unwrap();
-    String::from_utf8(buf).unwrap()
+    doc.render(state.config.width, &mut buf).expect("Vec<u8> write is infallible");
+    String::from_utf8(buf).expect("pretty crate always produces valid UTF-8")
 }
 
 /// Internal trait for converting AST nodes to pretty-printer documents
@@ -220,67 +221,3 @@ impl<'a> ToDoc<'a> for Document {
     }
 }
 
-/// Extract footnote and link definition indices from the document
-///
-/// This function performs a pre-processing pass over the AST to:
-/// 1. Assign numeric indices to footnote definitions (1, 2, 3, ...)
-/// 2. Collect link definitions for reference link resolution
-///
-/// Returns a tuple of (footnote_index, link_definitions) where:
-/// - footnote_index maps footnote labels to their numeric indices
-/// - link_definitions maps link labels to their full definitions
-fn get_indices(ast: &Document) -> (HashMap<String, usize>, HashMap<Vec<Inline>, LinkDefinition>) {
-    let mut footnote_index = HashMap::new();
-    let mut link_definitions = HashMap::new();
-    let mut footnote_counter = 1;
-
-    fn process_blocks(
-        blocks: &[Block],
-        footnote_index: &mut HashMap<String, usize>,
-        link_definitions: &mut HashMap<Vec<Inline>, LinkDefinition>,
-        footnote_counter: &mut usize,
-    ) {
-        for block in blocks {
-            match block {
-                Block::FootnoteDefinition(def) => {
-                    footnote_index.insert(def.label.clone(), *footnote_counter);
-                    *footnote_counter += 1;
-                }
-                Block::Definition(def) => {
-                    link_definitions.insert(def.label.clone(), def.clone());
-                }
-                Block::List(list) => {
-                    for item in &list.items {
-                        process_blocks(
-                            &item.blocks,
-                            footnote_index,
-                            link_definitions,
-                            footnote_counter,
-                        );
-                    }
-                }
-                Block::BlockQuote(blocks) => {
-                    process_blocks(blocks, footnote_index, link_definitions, footnote_counter);
-                }
-                Block::GitHubAlert(alert) => {
-                    process_blocks(
-                        &alert.blocks,
-                        footnote_index,
-                        link_definitions,
-                        footnote_counter,
-                    );
-                }
-                _ => {}
-            }
-        }
-    }
-
-    process_blocks(
-        &ast.blocks,
-        &mut footnote_index,
-        &mut link_definitions,
-        &mut footnote_counter,
-    );
-
-    (footnote_index, link_definitions)
-}

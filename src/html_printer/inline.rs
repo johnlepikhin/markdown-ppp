@@ -5,11 +5,9 @@ use pretty::{Arena, DocAllocator, DocBuilder};
 
 impl<'a> ToDoc<'a> for Vec<Inline> {
     fn to_doc(&self, state: &'a crate::html_printer::State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
-        state.arena.concat(
-            self.iter()
-                .map(|inline| inline.to_doc(state))
-                .collect::<Vec<_>>(),
-        )
+        state
+            .arena
+            .concat(self.iter().map(|inline| inline.to_doc(state)))
     }
 }
 
