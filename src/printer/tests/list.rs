@@ -193,8 +193,7 @@ fn fenced_code_block_in_list_idempotent(input: &str) {
 
     assert_eq!(
         pass1, pass2,
-        "Formatting should be idempotent.\nInput:\n{}\n\nFirst pass:\n{}\n\nSecond pass:\n{}",
-        input, pass1, pass2
+        "Formatting should be idempotent.\nInput:\n{input}\n\nFirst pass:\n{pass1}\n\nSecond pass:\n{pass2}"
     );
 }
 
@@ -233,7 +232,6 @@ fn fenced_code_block_in_blockquote_idempotent(input: &str) {
 
     assert_eq!(
         pass1, pass2,
-        "Formatting should be idempotent.\nInput:\n{}\n\nFirst pass:\n{}\n\nSecond pass:\n{}",
-        input, pass1, pass2
+        "Formatting should be idempotent.\nInput:\n{input}\n\nFirst pass:\n{pass1}\n\nSecond pass:\n{pass2}"
     );
 }

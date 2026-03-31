@@ -51,9 +51,9 @@ impl<'a> ToDoc<'a> for Inline {
                 let text = link.children.to_doc(state);
                 let url = escape_latex(&link.destination);
 
-                if link.title.is_some() {
+                if let Some(title_str) = &link.title {
                     // LaTeX doesn't have a simple way to show link titles, so we'll use a footnote
-                    let title = escape_latex(link.title.as_ref().unwrap());
+                    let title = escape_latex(title_str);
                     command(&state.arena, "href", &[], state.arena.text(url))
                         .append(state.arena.text("{"))
                         .append(text)

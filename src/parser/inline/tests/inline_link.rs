@@ -224,7 +224,7 @@ fn inline_link_with_escaped_closing_bracket() {
 fn inline_link_label_at_length_boundary() {
     // Label with 999 characters should succeed
     let label_999 = "a".repeat(999);
-    let input = format!("[{}](url)", label_999);
+    let input = format!("[{label_999}](url)");
     let doc = parse_markdown(MarkdownParserState::default(), &input).unwrap();
 
     assert!(matches!(
@@ -234,7 +234,7 @@ fn inline_link_label_at_length_boundary() {
 
     // Label with 1000 characters should fail to parse as link (falls back to text)
     let label_1000 = "a".repeat(1000);
-    let input = format!("[{}](url)", label_1000);
+    let input = format!("[{label_1000}](url)");
     let doc = parse_markdown(MarkdownParserState::default(), &input).unwrap();
 
     // Should not be parsed as a link

@@ -20,6 +20,6 @@ impl Default for Config {
 impl Config {
     /// Set the line width for pretty-printing plaintext output.
     pub fn with_width(self, width: usize) -> Self {
-        Self { width, ..self }
+        Self { width }
     }
 }

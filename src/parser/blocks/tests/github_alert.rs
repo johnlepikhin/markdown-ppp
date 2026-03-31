@@ -473,6 +473,6 @@ fn github_alert_standard_types_roundtrip() {
         let rendered = render_markdown(&doc1, PrinterConfig::default());
         let doc2 = parse_markdown(MarkdownParserState::default(), &rendered).unwrap();
 
-        assert_eq!(doc1, doc2, "Roundtrip failed for input: {}", input);
+        assert_eq!(doc1, doc2, "Roundtrip failed for input: {input}");
     }
 }
