@@ -25,6 +25,9 @@ pub mod convert;
 /// Generic AST types that support user-defined data
 pub mod generic;
 
+/// Pre-processing indices for footnotes and link definitions.
+pub(crate) mod index;
+
 /// Visitor-based MapData implementation to avoid recursion limits
 pub mod map_data_visitor;
 
