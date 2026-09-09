@@ -1,11 +1,11 @@
-use crate::parser::link_util::link_title;
+use crate::parser::link_util::{link_title, unescape_punctuation};
 use crate::parser::MarkdownParserState;
 use crate::{
     ast::{Image, Inline},
     parser::link_util::link_destination,
 };
 use nom::{
-    bytes::complete::{tag, take_while},
+    bytes::complete::tag,
     character::complete::{char, multispace0},
     combinator::opt,
     sequence::{delimited, preceded},
@@ -35,9 +35,15 @@ pub(crate) fn image<'a>(
                     nom::error::ErrorKind::Char,
                 )))
             }
-            None => (take_while(|c| c != ']'), char(']'))
-                .parse(input)
-                .map(|(i, (alt, _))| (i, alt))?,
+            None => match unescaped_close_bracket(input) {
+                Some(close) => (&input[close + 1..], &input[..close]),
+                None => {
+                    return Err(nom::Err::Error(nom::error::Error::new(
+                        input,
+                        nom::error::ErrorKind::Char,
+                    )))
+                }
+            },
         };
 
         let (input, (destination, title)) = delimited(
@@ -55,8 +61,26 @@ pub(crate) fn image<'a>(
             Inline::Image(Image {
                 destination,
                 title,
-                alt: alt.to_owned(),
+                alt: unescape_punctuation(alt),
             }),
         ))
     }
+}
+
+/// Byte offset of the first `]` in `input` that is not preceded by a backslash escape,
+/// treating `\x` as an opaque pair. Mirrors what [`InlineIndex`] records, so both paths
+/// of the alt scan agree on `![a\](x)](u.jpg)`.
+///
+/// [`InlineIndex`]: crate::parser::inline::index::InlineIndex
+pub(crate) fn unescaped_close_bracket(input: &str) -> Option<usize> {
+    let bytes = input.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\\' => i += 1 + input[i + 1..].chars().next().map_or(0, char::len_utf8),
+            b']' => return Some(i),
+            _ => i += 1,
+        }
+    }
+    None
 }

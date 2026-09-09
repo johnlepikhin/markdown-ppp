@@ -41,6 +41,23 @@ fn inline_link1() {
     );
 }
 
+/// Only ASCII punctuation is escapable in a title: `\"` collapses, `\n` stays two
+/// literal characters.
+#[test]
+fn inline_link_title_escapes() {
+    let doc = parse_markdown(MarkdownParserState::default(), r#"[foo](/url "a \" b\nc")"#).unwrap();
+    assert_eq!(
+        doc,
+        Document {
+            blocks: vec![Block::Paragraph(vec![Inline::Link(Link {
+                destination: "/url".to_owned(),
+                title: Some(r#"a " b\nc"#.to_owned()),
+                children: vec![Inline::Text("foo".to_owned())]
+            })])]
+        }
+    );
+}
+
 #[test]
 fn inline_link2() {
     let doc = parse_markdown(MarkdownParserState::default(), "[foo](train.jpg)").unwrap();

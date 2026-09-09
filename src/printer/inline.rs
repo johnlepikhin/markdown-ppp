@@ -68,18 +68,12 @@ impl<'a> ToDocInline<'a> for Inline {
                 title,
                 children,
             }) => {
-                let title = match title {
-                    Some(v) => arena
-                        .text(" \"")
-                        .append(arena.text(v.clone()))
-                        .append(arena.text("\"")),
-                    None => arena.nil(),
-                };
+                let title = arena.text(link_title_suffix(title.as_ref()));
                 arena
                     .text("[")
                     .append(children.to_doc_inline(allow_newlines, arena))
                     .append(arena.text("]("))
-                    .append(arena.text(destination.clone()))
+                    .append(arena.text(link_destination_to_string(destination)))
                     .append(title)
                     .append(")")
             }
@@ -88,15 +82,12 @@ impl<'a> ToDocInline<'a> for Inline {
                 title,
                 alt,
             }) => {
-                let title_part = title
-                    .as_ref()
-                    .map(|t| format!(" \"{t}\""))
-                    .unwrap_or_default();
+                let title_part = link_title_suffix(title.as_ref());
                 arena
                     .text("![")
-                    .append(arena.text(alt.clone()))
+                    .append(arena.text(escape_image_alt(alt)))
                     .append("](")
-                    .append(arena.text(destination.clone()))
+                    .append(arena.text(link_destination_to_string(destination)))
                     .append(arena.text(title_part))
                     .append(arena.text(")"))
             }
@@ -119,6 +110,92 @@ impl<'a> ToDocInline<'a> for Inline {
             }
         }
     }
+}
+
+/// Render a link destination so that re-parsing it yields the same string.
+///
+/// The bare form only accepts a non-empty run of characters that are neither spaces
+/// nor control characters nor `<`, with balanced parentheses; everything else has to
+/// go into `<...>`, where `<` and `>` are escaped. Inside `<...>` a backslash is only
+/// an escape before `<` or `>`, so the rest of the string is emitted verbatim — which
+/// is also how the parser stores it.
+pub(crate) fn link_destination_to_string(destination: &str) -> String {
+    if is_bare_destination(destination) {
+        return destination.to_owned();
+    }
+    let mut out = String::with_capacity(destination.len() + 2);
+    out.push('<');
+    for c in destination.chars() {
+        if c == '<' || c == '>' {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out.push('>');
+    out
+}
+
+/// Whether `destination` can be printed without the surrounding `<...>`.
+fn is_bare_destination(destination: &str) -> bool {
+    if destination.is_empty() {
+        return false;
+    }
+    let mut depth = 0usize;
+    let mut chars = destination.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            // An escape pair is opaque: its second character is literal.
+            '\\' => {
+                if chars.next().is_none() {
+                    return false;
+                }
+            }
+            '(' => depth += 1,
+            ')' => match depth.checked_sub(1) {
+                Some(v) => depth = v,
+                None => return false,
+            },
+            c if c.is_whitespace() || c.is_control() || c == '<' => return false,
+            _ => {}
+        }
+    }
+    depth == 0
+}
+
+/// Render a link or image title as ` "title"`, or nothing when there is none.
+///
+/// The parser resolves backslash escapes in a title, so `"` and `\` have to be escaped
+/// again; otherwise a title containing a quote ends the title early on re-parse.
+pub(crate) fn link_title_suffix(title: Option<&String>) -> String {
+    let Some(title) = title else {
+        return String::new();
+    };
+    let mut out = String::with_capacity(title.len() + 3);
+    out.push_str(" \"");
+    for c in title.chars() {
+        if c == '\\' || c == '"' {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out.push('"');
+    out
+}
+
+/// Escape an image `alt` so that re-parsing `![alt]` yields it back.
+///
+/// The parser stores `alt` with its backslash escapes resolved and does not parse it
+/// as inline content, so only the characters that end the description (`]`) and the
+/// escape marker itself have to be escaped again.
+fn escape_image_alt(alt: &str) -> String {
+    let mut out = String::with_capacity(alt.len());
+    for c in alt.chars() {
+        if c == '\\' || c == ']' {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
 }
 
 /// Split string by spaces, but keep the spaces in the result.

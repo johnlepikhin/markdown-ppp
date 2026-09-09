@@ -26,9 +26,9 @@ impl<'a> ToDoc<'a> for Inline {
                 title,
                 children,
             }) => {
-                let mut attributes = vec![("href".to_owned(), escape(destination))];
+                let mut attributes = vec![("href".to_owned(), destination.clone())];
                 if let Some(title) = title {
-                    attributes.push(("title".to_owned(), escape(title)))
+                    attributes.push(("title".to_owned(), title.clone()))
                 }
                 tag(state, "a", attributes, children.to_doc(state))
             }
@@ -38,18 +38,18 @@ impl<'a> ToDoc<'a> for Inline {
                 alt,
             }) => {
                 let mut attributes = vec![
-                    ("src".to_owned(), escape(destination)),
-                    ("alt".to_owned(), escape(alt)),
+                    ("src".to_owned(), destination.clone()),
+                    ("alt".to_owned(), alt.clone()),
                 ];
                 if let Some(title) = title {
-                    attributes.push(("title".to_owned(), escape(title)))
+                    attributes.push(("title".to_owned(), title.clone()))
                 }
                 tag(state, "img", attributes, state.arena.nil())
             }
             Inline::Autolink(link) => tag(
                 state,
                 "a",
-                vec![("href".to_owned(), escape(link))],
+                vec![("href".to_owned(), link.clone())],
                 state.arena.text(escape(link)),
             ),
             Inline::FootnoteReference(label) => {
@@ -64,7 +64,7 @@ impl<'a> ToDoc<'a> for Inline {
                         ("class".to_owned(), "markdown-footnote-reference".to_owned()),
                         (
                             "href".to_owned(),
-                            escape(&format!("#{}{}", state.config.anchor_prefix, index)),
+                            format!("#{}{}", state.config.anchor_prefix, index),
                         ),
                     ],
                     state.arena.text(format!("[{index}]")),
@@ -76,10 +76,9 @@ impl<'a> ToDoc<'a> for Inline {
                     Some(v) => v,
                     None => return state.arena.nil(),
                 };
-                let mut attributes =
-                    vec![("href".to_owned(), escape(definition.destination.as_str()))];
+                let mut attributes = vec![("href".to_owned(), definition.destination.clone())];
                 if let Some(title) = &definition.title {
-                    attributes.push(("title".to_owned(), escape(title)))
+                    attributes.push(("title".to_owned(), title.clone()))
                 }
                 tag(state, "a", attributes, v.text.to_doc(state))
             }

@@ -135,7 +135,7 @@ pub(crate) fn link_title<'a>(
             None => title_end_slow(input, end_delim),
         }
         .ok_or_else(error)?;
-        let title = unescape_title(&input[1..close]);
+        let title = unescape_punctuation(&input[1..close]);
         Ok((&input[close + 1..], title))
     }
 }
@@ -154,24 +154,43 @@ fn title_end_slow(input: &str, delim: u8) -> Option<usize> {
     None
 }
 
-/// Title content with every `\x` escape pair replaced by `x`.
-fn unescape_title(raw: &str) -> String {
-    let mut out = String::with_capacity(raw.len());
-    let mut chars = raw.chars();
-    while let Some(c) = chars.next() {
-        if c == '\\' {
-            if let Some(escaped) = chars.next() {
-                out.push(escaped);
-                continue;
-            }
-        }
-        out.push(c);
-    }
-    out
-}
-
 fn escaped_char(input: &str) -> IResult<&str, char> {
     preceded(tag("\\"), anychar).parse(input)
+}
+
+/// Whether `\c` is a backslash escape per CommonMark: only ASCII punctuation can be
+/// escaped, every other `\c` is two literal characters.
+fn is_escapable(c: char) -> bool {
+    c.is_ascii_punctuation()
+}
+
+/// Text with every backslash escape resolved, i.e. `\c` replaced by `c` when `c` is
+/// ASCII punctuation. Used for content that is not parsed as inlines but where the
+/// escapes still have to be honoured, such as an image `alt`.
+pub(crate) fn unescape_punctuation(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    let mut rest = raw;
+    while let Some(pos) = rest.find('\\') {
+        out.push_str(&rest[..pos]);
+        let after = &rest[pos + 1..];
+        match after.chars().next() {
+            Some(c) if is_escapable(c) => {
+                out.push(c);
+                rest = &after[c.len_utf8()..];
+            }
+            Some(c) => {
+                out.push('\\');
+                out.push(c);
+                rest = &after[c.len_utf8()..];
+            }
+            None => {
+                out.push('\\');
+                rest = "";
+            }
+        }
+    }
+    out.push_str(rest);
+    out
 }
 
 /// Maximum nesting depth for square brackets to prevent stack overflow.

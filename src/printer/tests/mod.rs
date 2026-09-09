@@ -1,6 +1,7 @@
 #![cfg(test)]
 use rstest::rstest;
 
+mod escapes;
 mod line_wrapping_issues;
 mod list;
 mod table;
@@ -137,6 +138,10 @@ let s = "hello\n";
 
         case(
             r#"Autolinks test: <http://example.com> and <johnlepikhin@gmail.com>"#),
+
+        // An escaped `]` in an image description stays escaped on the way back out
+        case(
+            r"![a\](x)](u.jpg)"),
 
         // GitHub Alert tests
         case(

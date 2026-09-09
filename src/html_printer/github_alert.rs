@@ -1,5 +1,8 @@
 use crate::ast::{GitHubAlert, GitHubAlertType};
-use crate::html_printer::{util::tag, State, ToDoc};
+use crate::html_printer::{
+    util::{escape, tag},
+    State, ToDoc,
+};
 use pretty::{Arena, DocAllocator, DocBuilder};
 
 impl GitHubAlertType {
@@ -60,7 +63,8 @@ impl<'a> ToDoc<'a> for GitHubAlert {
             state,
             "p",
             vec![("class".to_owned(), "markdown-alert-title".to_owned())],
-            icon.append(state.arena.text(self.alert_type.html_title())),
+            // `Custom` carries user text, so the title is a text node, not markup.
+            icon.append(state.arena.text(escape(&self.alert_type.html_title()))),
         );
 
         let content = state

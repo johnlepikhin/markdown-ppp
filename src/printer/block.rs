@@ -105,11 +105,8 @@ impl<'a> ToDoc<'a> for Block {
                 .append(arena.text("]: "))
                 .append(arena.text(format!(
                     "{}{}",
-                    def.destination,
-                    def.title
-                        .as_ref()
-                        .map(|t| format!(" \"{t}\""))
-                        .unwrap_or_default()
+                    crate::printer::inline::link_destination_to_string(&def.destination),
+                    crate::printer::inline::link_title_suffix(def.title.as_ref())
                 ))),
 
             Block::Empty => arena.nil(),

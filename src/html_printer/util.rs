@@ -15,6 +15,11 @@ pub(crate) fn escape(value: &str) -> String {
     escaped
 }
 
+/// Render `<tag attr="value" ...>inner</tag>`.
+///
+/// Attribute values are escaped here and must therefore be passed raw: escaping them
+/// at the call site yields `&amp;apos;` for `'` and breaks every URL with a query
+/// string. `inner` is inserted verbatim, so callers escape text nodes themselves.
 pub(crate) fn tag<'a>(
     state: &'a crate::html_printer::State<'a>,
     tag: &'static str,
