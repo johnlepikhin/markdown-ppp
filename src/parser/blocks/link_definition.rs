@@ -34,8 +34,9 @@ pub(crate) fn link_definition<'a>(
             preceded(many_m_n(0, 3, char(' ')), link_label(state.clone())).parse(input)?;
         let (input, _) = char(':').parse(input)?;
         let (input, _) = one_line_whitespace0.parse(input)?;
-        let (input, destination) = link_destination.parse(input)?;
-        let (input, title) = opt(preceded(one_line_whitespace1, link_title)).parse(input)?;
+        let (input, destination) = link_destination(state.clone()).parse(input)?;
+        let (input, title) =
+            opt(preceded(one_line_whitespace1, link_title(state.clone()))).parse(input)?;
         let (input, _) = eof_or_eol.parse(input)?;
 
         let v = LinkDefinition {

@@ -25,7 +25,8 @@ pub(crate) fn strikethrough<'a>(
         let (input, content) = recognize(content_parser).parse(input)?;
         let (input, _) = tag("~~").parse(input)?;
 
-        let (_, inline) = crate::parser::inline::inline_many1(state.clone()).parse(content)?;
+        let nested_state = Rc::new(state.deeper());
+        let (_, inline) = crate::parser::inline::inline_many1(nested_state).parse(content)?;
 
         Ok((input, Inline::Strikethrough(inline)))
     }

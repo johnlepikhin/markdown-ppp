@@ -25,6 +25,7 @@ pub(crate) fn block<'a>(
     state: Rc<MarkdownParserState>,
 ) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<Block>> {
     move |input: &'a str| {
+        state.check_depth(input)?;
         preceded(
             many_empty_lines0,
             alt((

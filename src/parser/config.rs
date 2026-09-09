@@ -17,6 +17,9 @@ type CustomBlockParserFn =
 type CustomInlineParserFn =
     Rc<RefCell<Box<dyn for<'a> FnMut(&'a str) -> IResult<&'a str, Vec<crate::ast::Inline>>>>>;
 
+/// Default value of [`MarkdownParserConfig::with_max_nesting_depth`].
+pub const DEFAULT_MAX_NESTING_DEPTH: usize = 32;
+
 /// Behavior of the parser when encountering certain elements.
 #[derive(Clone)]
 pub enum ElementBehavior<ELT> {
@@ -45,6 +48,10 @@ pub struct MarkdownParserConfig {
 
     /// A map of HTML entities to their corresponding `Entity` structs.
     pub(crate) html_entities_map: HashMap<String, &'static entities::Entity>,
+
+    /// Maximum nesting depth of container blocks and inline elements.
+    /// See [`MarkdownParserConfig::with_max_nesting_depth`].
+    pub(crate) max_nesting_depth: usize,
 
     /// The behavior of the parser when encountering blockquotes.
     pub(crate) block_blockquote_behavior: ElementBehavior<crate::ast::Block>,
@@ -124,6 +131,7 @@ impl Default for MarkdownParserConfig {
         Self {
             allow_no_space_in_headings: false,
             html_entities_map: Self::make_html_entities_map(),
+            max_nesting_depth: DEFAULT_MAX_NESTING_DEPTH,
             block_blockquote_behavior: ElementBehavior::Parse,
             block_github_alert_behavior: ElementBehavior::Parse,
             block_heading_v1_behavior: ElementBehavior::Parse,
@@ -165,6 +173,23 @@ impl MarkdownParserConfig {
     pub fn with_allow_no_space_in_headings(self) -> Self {
         Self {
             allow_no_space_in_headings: true,
+            ..self
+        }
+    }
+
+    /// Set the maximum nesting depth of the document.
+    ///
+    /// Every container block (blockquote, list item, footnote definition, GitHub alert)
+    /// and every inline element with nested content (emphasis, strikethrough, link label)
+    /// adds one level of nesting. When the depth exceeds `depth`,
+    /// [`parse_markdown`](crate::parser::parse_markdown) returns an error with
+    /// [`nom::error::ErrorKind::TooLarge`].
+    ///
+    /// The limit bounds both the parse time and the stack usage on adversarial input
+    /// (e.g. thousands of `>` markers). Defaults to [`DEFAULT_MAX_NESTING_DEPTH`].
+    pub fn with_max_nesting_depth(self, depth: usize) -> Self {
+        Self {
+            max_nesting_depth: depth,
             ..self
         }
     }

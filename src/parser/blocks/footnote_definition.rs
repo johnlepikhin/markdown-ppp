@@ -11,16 +11,25 @@ use nom::{
 };
 use std::rc::Rc;
 
+/// Footnote definition marker and its first line: `[^label]: text`.
+///
+/// Returns the label and the first content line. Used as a cheap lookahead that does
+/// not parse the footnote body.
+pub(crate) fn footnote_definition_start(input: &str) -> IResult<&str, (&str, &str)> {
+    let (input, _) = many_m_n(0, 3, char(' ')).parse(input)?;
+    let (input, _) = tag("[^").parse(input)?;
+    let (input, label) = recognize(many1(verify(none_of("]"), |c| *c != ']'))).parse(input)?;
+    let (input, _) = tag("]:").parse(input)?;
+    let (input, _) = many_m_n(0, 3, char(' ')).parse(input)?;
+    let (input, first_line) = line_terminated(not_eof_or_eol1).parse(input)?;
+    Ok((input, (label, first_line)))
+}
+
 pub(crate) fn footnote_definition<'a>(
     state: Rc<MarkdownParserState>,
 ) -> impl FnMut(&'a str) -> IResult<&'a str, FootnoteDefinition> {
     move |input: &'a str| {
-        let (input, _) = many_m_n(0, 3, char(' ')).parse(input)?;
-        let (input, _) = tag("[^").parse(input)?;
-        let (input, label) = recognize(many1(verify(none_of("]"), |c| *c != ']'))).parse(input)?;
-        let (input, _) = tag("]:").parse(input)?;
-        let (input, _) = many_m_n(0, 3, char(' ')).parse(input)?;
-        let (input, first_line) = line_terminated(not_eof_or_eol1).parse(input)?;
+        let (input, (label, first_line)) = footnote_definition_start(input)?;
         let (input, rest_lines) = many0(preceded(
             many_m_n(3, 3, char(' ')),
             line_terminated(not_eof_or_eol1),

@@ -70,16 +70,16 @@ pub(crate) fn is_paragraph_line_start<'a>(
                 state.config.block_thematic_break_behavior.clone(),
                 crate::parser::blocks::thematic_break::thematic_break(state.clone()),
             ),
+            // Lookaheads below must only match the *marker* of a container block, never
+            // parse its content: a full parse here is discarded and repeated by `block`,
+            // which makes the parse time exponential in the nesting depth.
             conditional_block_unit(
                 state.config.block_blockquote_behavior.clone(),
-                value(
-                    (),
-                    crate::parser::blocks::blockquote::blockquote(state.clone()),
-                ),
+                value((), crate::parser::blocks::blockquote::blockquote_start),
             ),
             conditional_block_unit(
                 state.config.block_list_behavior.clone(),
-                value((), crate::parser::blocks::list::list_item(state.clone())),
+                value((), crate::parser::blocks::list::list_marker_with_span_size),
             ),
             conditional_block_unit(
                 state.config.block_code_block_behavior.clone(),
@@ -106,7 +106,7 @@ pub(crate) fn is_paragraph_line_start<'a>(
                 state.config.block_footnote_definition_behavior.clone(),
                 value(
                     (),
-                    crate::parser::blocks::footnote_definition::footnote_definition(state.clone()),
+                    crate::parser::blocks::footnote_definition::footnote_definition_start,
                 ),
             ),
             conditional_block_unit(

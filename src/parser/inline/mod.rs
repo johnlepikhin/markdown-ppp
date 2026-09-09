@@ -1,13 +1,12 @@
 mod autolink;
+mod bracketed;
 mod code_span;
 mod emphasis;
 mod environment_variable;
-mod footnote_reference;
 mod hard_newline;
 mod html_entity;
 mod image;
-mod inline_link;
-mod reference_link;
+pub(crate) mod index;
 mod strikethrough;
 mod text;
 
@@ -63,7 +62,9 @@ pub(crate) fn inline_many0<'a>(
     state: Rc<MarkdownParserState>,
 ) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<Inline>> {
     move |input: &'a str| {
-        let (input, list_of_lists) = many0(inline(state.clone())).parse(input)?;
+        let (input, list_of_lists) = with_index(&state, input, |input| {
+            many0(inline(state.clone())).parse(input)
+        })?;
         let r: Vec<_> = list_of_lists.into_iter().flatten().collect();
         let merged = merge_consecutive_text_elements(r);
         Ok((input, merged))
@@ -74,37 +75,43 @@ pub(crate) fn inline_many1<'a>(
     state: Rc<MarkdownParserState>,
 ) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<Inline>> {
     move |input: &'a str| {
-        let (input, list_of_lists) = many1(inline(state.clone())).parse(input)?;
+        let (input, list_of_lists) = with_index(&state, input, |input| {
+            many1(inline(state.clone())).parse(input)
+        })?;
         let r: Vec<_> = list_of_lists.into_iter().flatten().collect();
         let merged = merge_consecutive_text_elements(r);
         Ok((input, merged))
     }
 }
 
+/// Run `f` with the delimiter index of `input` installed in `state`, restoring the
+/// previous index afterwards. Nested inline content is parsed with a deeper state,
+/// so an index is never clobbered while in use.
+fn with_index<'a, T>(
+    state: &MarkdownParserState,
+    input: &'a str,
+    f: impl FnOnce(&'a str) -> T,
+) -> T {
+    let index = Rc::new(index::InlineIndex::build(input));
+    let previous = state.inline_index.replace(Some(index));
+    let result = f(input);
+    state.inline_index.replace(previous);
+    result
+}
+
 pub(crate) fn inline<'a>(
     state: Rc<MarkdownParserState>,
 ) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<Inline>> {
     move |input: &'a str| {
+        state.check_depth(input)?;
         alt((
             conditional_inline(
                 state.config.inline_autolink_behavior.clone(),
                 map(crate::parser::inline::autolink::autolink, Inline::Autolink),
             ),
-            conditional_inline(
-                state.config.inline_link_behavior.clone(),
-                map(
-                    crate::parser::inline::inline_link::inline_link(state.clone()),
-                    Inline::Link,
-                ),
-            ),
-            conditional_inline(
-                state.config.inline_footnote_reference_behavior.clone(),
-                crate::parser::inline::footnote_reference::footnote_reference,
-            ),
-            conditional_inline(
-                state.config.inline_reference_link_behavior.clone(),
-                crate::parser::inline::reference_link::reference_link(state.clone()),
-            ),
+            // Inline links, footnote references and reference links share `[label]`;
+            // behaviors of the three are applied inside.
+            crate::parser::inline::bracketed::bracketed_element(state.clone()),
             conditional_inline(
                 state.config.inline_hard_newline_behavior.clone(),
                 crate::parser::inline::hard_newline::hard_newline,
@@ -133,6 +140,11 @@ pub(crate) fn inline<'a>(
             conditional_inline(
                 state.config.inline_text_behavior.clone(),
                 crate::parser::inline::text::text(state.clone()),
+            ),
+            // A character that may start an element but did not: literal text.
+            conditional_inline(
+                state.config.inline_text_behavior.clone(),
+                crate::parser::inline::text::literal_char,
             ),
         ))
         .parse(input)

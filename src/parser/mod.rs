@@ -52,6 +52,9 @@ mod inline;
 mod link_util;
 mod util;
 
+#[cfg(test)]
+mod tests;
+
 use crate::ast::Document;
 use crate::parser::config::MarkdownParserConfig;
 use nom::{
@@ -92,6 +95,17 @@ pub struct MarkdownParserState {
     /// When true, fenced code blocks should not strip additional indentation from their content.
     /// This field is for internal use only.
     pub(crate) is_nested_block_context: bool,
+    /// Current nesting depth (container blocks + inline elements with nested content).
+    /// Checked against `config.max_nesting_depth` at every `block`/`inline` entry.
+    pub(crate) depth: usize,
+    /// Nesting depth of link labels (`[a [b [c]]]`). Tracked separately because a
+    /// shortcut/collapsed `LinkReference` stores the label content twice, so the AST
+    /// doubles at every level; see `link_util::MAX_LINK_LABEL_DEPTH`.
+    pub(crate) link_label_depth: usize,
+    /// Delimiter index of the slice currently parsed by `inline_many0`/`inline_many1`
+    /// with this state. Nested inline content is parsed with a deeper state and gets
+    /// its own index.
+    pub(crate) inline_index: std::cell::RefCell<Option<Rc<inline::index::InlineIndex>>>,
 }
 
 impl MarkdownParserState {
@@ -126,18 +140,59 @@ impl MarkdownParserState {
         Self {
             config: Rc::new(config),
             is_nested_block_context: false,
+            depth: 0,
+            link_label_depth: 0,
+            inline_index: Default::default(),
         }
     }
 
     /// Create a nested parser state for parsing content extracted from container blocks
     ///
-    /// This method creates a new state that shares the same configuration but marks
-    /// the parsing context as nested. This prevents double-stripping of indentation
-    /// when parsing fenced code blocks inside list items, blockquotes, etc.
+    /// This method creates a new state that shares the same configuration, marks
+    /// the parsing context as nested and increments the nesting depth. The flag prevents
+    /// double-stripping of indentation when parsing fenced code blocks inside list items,
+    /// blockquotes, etc.
     pub(crate) fn nested(&self) -> Self {
         Self {
             config: self.config.clone(),
             is_nested_block_context: true,
+            depth: self.depth + 1,
+            link_label_depth: self.link_label_depth,
+            inline_index: Default::default(),
+        }
+    }
+
+    /// Create a state one nesting level deeper, for parsing the content of inline
+    /// elements (emphasis, strikethrough, ...). Does not touch the block context flag.
+    pub(crate) fn deeper(&self) -> Self {
+        Self {
+            config: self.config.clone(),
+            is_nested_block_context: self.is_nested_block_context,
+            depth: self.depth + 1,
+            link_label_depth: self.link_label_depth,
+            inline_index: Default::default(),
+        }
+    }
+
+    /// Like [`Self::deeper`], additionally counting one level of link label nesting.
+    pub(crate) fn deeper_link_label(&self) -> Self {
+        Self {
+            link_label_depth: self.link_label_depth + 1,
+            ..self.deeper()
+        }
+    }
+
+    /// Fail with an unrecoverable `TooLarge` error when the nesting depth exceeds
+    /// `config.max_nesting_depth`. `Failure` (not `Error`) is used so that `alt`,
+    /// `many*`, `not` and `opt` propagate it instead of trying alternatives.
+    pub(crate) fn check_depth<'a>(&self, input: &'a str) -> nom::IResult<&'a str, ()> {
+        if self.depth > self.config.max_nesting_depth {
+            Err(nom::Err::Failure(nom::error::Error::new(
+                input,
+                nom::error::ErrorKind::TooLarge,
+            )))
+        } else {
+            Ok((input, ()))
         }
     }
 }
@@ -197,6 +252,11 @@ impl Default for MarkdownParserState {
 /// Returns a parse error if the input contains invalid Markdown syntax
 /// that cannot be recovered from. Most malformed Markdown is handled
 /// gracefully according to CommonMark's error handling rules.
+///
+/// Returns `nom::Err::Failure` with [`nom::error::ErrorKind::TooLarge`] when the
+/// nesting depth of the document exceeds
+/// [`MarkdownParserConfig::with_max_nesting_depth`]. This protects against
+/// adversarial input such as thousands of nested `>` markers.
 pub fn parse_markdown(
     state: MarkdownParserState,
     input: &str,

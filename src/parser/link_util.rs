@@ -1,9 +1,9 @@
-use nom::character::complete::{anychar, char, none_of, one_of, satisfy};
+use nom::character::complete::{anychar, char, one_of, satisfy};
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    combinator::{map, not, peek, recognize, value, verify},
-    multi::{fold_many0, many0, many1},
+    combinator::{map, not, peek},
+    multi::{fold_many0, many0},
     sequence::{delimited, preceded},
     IResult, Parser,
 };
@@ -15,65 +15,159 @@ pub(crate) fn link_label<'a>(
     state: Rc<MarkdownParserState>,
 ) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<crate::ast::Inline>> {
     move |input: &'a str| {
-        delimited(tag("["), link_label_inner(state.clone()), tag("]")).parse(input)
+        let (rest, raw) = link_label_raw(&state, input)?;
+        let label = link_label_content(state.clone(), &raw, input)?;
+        Ok((rest, label))
     }
 }
 
-fn link_label_inner<'a>(
+/// `[label]` with balanced nested brackets, without parsing the label content.
+///
+/// Returns the raw label text (escapes of `]` resolved). Uses the delimiter index of
+/// the current inline slice when there is one (O(1)); otherwise falls back to a
+/// recursive scan, which is linear in the input.
+pub(crate) fn link_label_raw<'a>(
+    state: &MarkdownParserState,
+    input: &'a str,
+) -> IResult<&'a str, String> {
+    if !input.starts_with('[') {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        )));
+    }
+    let indexed = state
+        .inline_index
+        .borrow()
+        .as_ref()
+        .and_then(|index| index.covers(input).then(|| index.bracket_match(input)));
+    match indexed {
+        Some(Some(close)) => {
+            let raw = unescape_label(&input[1..close]);
+            Ok((&input[close + 1..], raw))
+        }
+        Some(None) => Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Tag,
+        ))),
+        None => delimited(tag("["), balanced_brackets_content, tag("]")).parse(input),
+    }
+}
+
+/// Label text between the brackets, with `\]` resolved to `]` and every other escape
+/// pair kept verbatim (the same result `balanced_brackets_content` produces).
+fn unescape_label(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    let mut rest = raw;
+    while let Some(pos) = rest.find('\\') {
+        out.push_str(&rest[..pos]);
+        let after = &rest[pos + 1..];
+        match after.chars().next() {
+            Some(']') => {
+                out.push(']');
+                rest = &after[1..];
+            }
+            Some(c) => {
+                out.push('\\');
+                out.push(c);
+                rest = &after[c.len_utf8()..];
+            }
+            None => {
+                out.push('\\');
+                rest = "";
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Parse the raw label text (from [`link_label_raw`]) as inline elements.
+///
+/// `outer` is the input the label was taken from; errors are reported against it
+/// because `raw` does not outlive this call.
+pub(crate) fn link_label_content<'a>(
     state: Rc<MarkdownParserState>,
-) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<crate::ast::Inline>> {
+    raw: &str,
+    outer: &'a str,
+) -> Result<Vec<crate::ast::Inline>, nom::Err<nom::error::Error<&'a str>>> {
+    if !(raw.chars().any(|c| c != ' ' && c != '\n') && raw.len() < 1000)
+        || state.link_label_depth >= MAX_LINK_LABEL_DEPTH
+    {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            outer,
+            nom::error::ErrorKind::Verify,
+        )));
+    }
+
+    // Recursively parse the label content as inline elements
+    let nested_state = Rc::new(state.deeper_link_label());
+    let (_, label) = crate::parser::inline::inline_many1(nested_state)
+        .parse(raw)
+        .map_err(|err| err.map_input(|_| outer))?;
+
+    Ok(label)
+}
+
+/// Link title: `"..."`, `'...'` or `(...)`, with backslash escapes resolved.
+///
+/// The closing delimiter comes from the delimiter index when the input is covered by
+/// one; otherwise a linear scan is used. Without the index every `(` that is not a
+/// title would be scanned up to the end of the paragraph.
+pub(crate) fn link_title<'a>(
+    state: Rc<MarkdownParserState>,
+) -> impl FnMut(&'a str) -> IResult<&'a str, String> {
     move |input: &'a str| {
-        // Parse content with balanced brackets (handles nested [...] properly)
-        let (input, label) = verify(balanced_brackets_content, |s: &String| {
-            s.chars().any(|c| c != ' ' && c != '\n') && s.len() < 1000
-        })
-        .parse(input)?;
-
-        // Recursively parse the label content as inline elements
-        let (_, label) = crate::parser::inline::inline_many1(state.clone())
-            .parse(label.as_str())
-            .map_err(|err| err.map_input(|_| input))?;
-
-        Ok((input, label))
+        let error = || nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Char));
+        let end_delim = match input.as_bytes().first() {
+            Some(b'"') => b'"',
+            Some(b'\'') => b'\'',
+            Some(b'(') => b')',
+            _ => return Err(error()),
+        };
+        let indexed = state
+            .inline_index
+            .borrow()
+            .as_ref()
+            .and_then(|index| index.title_end(input, end_delim));
+        let close = match indexed {
+            Some(found) => found,
+            None => title_end_slow(input, end_delim),
+        }
+        .ok_or_else(error)?;
+        let title = unescape_title(&input[1..close]);
+        Ok((&input[close + 1..], title))
     }
 }
 
-pub(crate) fn link_title(input: &str) -> IResult<&str, String> {
-    alt((
-        link_title_double_quoted,
-        link_title_single_quoted,
-        link_title_parenthesized,
-    ))
-    .parse(input)
-}
-
-fn link_title_parenthesized(input: &str) -> IResult<&str, String> {
-    delimited(char('('), link_title_inner(')'), char(')')).parse(input)
-}
-
-fn link_title_single_quoted(input: &str) -> IResult<&str, String> {
-    delimited(char('\''), link_title_inner('\''), char('\'')).parse(input)
-}
-
-fn link_title_double_quoted(input: &str) -> IResult<&str, String> {
-    delimited(tag("\""), link_title_inner('"'), tag("\"")).parse(input)
-}
-
-fn link_title_inner(end_delim: char) -> impl FnMut(&str) -> IResult<&str, String> {
-    move |input: &str| {
-        fold_many0(
-            alt((
-                map(escaped_char, |c| c.to_string()),
-                map(none_of(&[end_delim, '\\'][..]), |c| c.to_string()),
-            )),
-            String::new,
-            |mut acc, s| {
-                acc.push_str(&s);
-                acc
-            },
-        )
-        .parse(input)
+/// Offset of the first unescaped `delim` after the opening delimiter at offset 0.
+fn title_end_slow(input: &str, delim: u8) -> Option<usize> {
+    let bytes = input.as_bytes();
+    let mut i = 1;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\\' => i += 1 + input[i + 1..].chars().next().map_or(0, char::len_utf8),
+            b if b == delim => return Some(i),
+            _ => i += 1,
+        }
     }
+    None
+}
+
+/// Title content with every `\x` escape pair replaced by `x`.
+fn unescape_title(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    let mut chars = raw.chars();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            if let Some(escaped) = chars.next() {
+                out.push(escaped);
+                continue;
+            }
+        }
+        out.push(c);
+    }
+    out
 }
 
 fn escaped_char(input: &str) -> IResult<&str, char> {
@@ -82,6 +176,14 @@ fn escaped_char(input: &str) -> IResult<&str, char> {
 
 /// Maximum nesting depth for square brackets to prevent stack overflow.
 const MAX_BRACKET_DEPTH: usize = 32;
+
+/// Maximum nesting of link labels (`[a [b [c]]]`) that is parsed as nested links;
+/// deeper labels are left as literal text.
+///
+/// A shortcut or collapsed `LinkReference` stores the label content in both `label`
+/// and `text`, so the AST doubles at every nesting level: without a limit, 32 nested
+/// brackets (65 bytes of input) would produce 2^32 nodes.
+pub(crate) const MAX_LINK_LABEL_DEPTH: usize = 8;
 
 /// Parses content inside square brackets, handling nested brackets and escapes.
 /// Returns the raw string content (including nested bracket pairs).
@@ -133,8 +235,10 @@ fn balanced_brackets_with_depth(input: &str, depth: usize) -> IResult<&str, Stri
     Ok((input, content))
 }
 
-pub(crate) fn link_destination(input: &str) -> IResult<&str, String> {
-    alt((link_destination1, link_destination2)).parse(input)
+pub(crate) fn link_destination<'a>(
+    state: Rc<MarkdownParserState>,
+) -> impl FnMut(&'a str) -> IResult<&'a str, String> {
+    move |input: &'a str| alt((link_destination1, link_destination2(&state))).parse(input)
 }
 
 fn link_destination1(input: &str) -> IResult<&str, String> {
@@ -152,45 +256,23 @@ fn link_destination1(input: &str) -> IResult<&str, String> {
     Ok((input, v))
 }
 
-fn link_destination2(input: &str) -> IResult<&str, String> {
-    let (input, _) = peek(satisfy(|c| is_valid_char(c) && c != '<')).parse(input)?;
-
-    map(
-        recognize(many1(alt((
-            value((), escaped_char),
-            value((), balanced_parens),
-            value((), satisfy(|c| is_valid_char(c) && c != '(' && c != ')')),
-        )))),
-        |s: &str| s.to_string(),
-    )
-    .parse(input)
-}
-
-fn balanced_parens(input: &str) -> IResult<&str, String> {
-    delimited(
-        tag("("),
-        map(
-            fold_many0(
-                alt((
-                    map(escaped_char, |c| c.to_string()),
-                    map(balanced_parens, |s| format!("({s})")),
-                    map(satisfy(|c| is_valid_char(c) && c != '(' && c != ')'), |c| {
-                        c.to_string()
-                    }),
-                )),
-                String::new,
-                |mut acc, item| {
-                    acc.push_str(&item);
-                    acc
-                },
-            ),
-            |s| s,
-        ),
-        tag(")"),
-    )
-    .parse(input)
-}
-
-fn is_valid_char(c: char) -> bool {
-    !c.is_ascii_control() && c != ' ' && c != '<'
+/// Destination without `<...>`: a non-empty run of destination characters, escape
+/// pairs and balanced paren groups. The length comes from the delimiter index when
+/// the input is covered by one, otherwise from a linear scan.
+fn link_destination2<'a, 'b>(
+    state: &'b MarkdownParserState,
+) -> impl FnMut(&'a str) -> IResult<&'a str, String> + 'b {
+    move |input: &'a str| {
+        let len = match state.inline_index.borrow().as_ref() {
+            Some(index) => index.destination_len(input),
+            None => crate::parser::inline::index::destination_len_slow(input),
+        };
+        if len == 0 {
+            return Err(nom::Err::Error(nom::error::Error::new(
+                input,
+                nom::error::ErrorKind::Satisfy,
+            )));
+        }
+        Ok((&input[len..], input[..len].to_string()))
+    }
 }

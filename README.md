@@ -167,6 +167,21 @@ This mechanism allows you to override, filter, or completely redefine how each
 Markdown element is treated during parsing, giving you deep control over the
 resulting AST.
 
+### Nesting depth limit
+
+Container blocks (block quotes, list items, footnote definitions, alerts) and
+inline elements with nested content (emphasis, strikethrough, link labels) are
+parsed recursively. To keep parse time and stack usage bounded on adversarial
+input (for example thousands of `>` markers), the nesting depth is limited to 32
+levels by default. When the limit is exceeded, `parse_markdown` returns
+`nom::Err::Failure` with `ErrorKind::TooLarge`. The limit is configurable:
+
+```rust
+use markdown_ppp::parser::config::*;
+
+let config = MarkdownParserConfig::default().with_max_nesting_depth(64);
+```
+
 ### Registering custom parsers
 
 You can also register your own custom block-level or inline-level parsers by

@@ -102,26 +102,6 @@ where
     }
 }
 
-pub(crate) fn conditional_inline_unit<'a, P>(
-    behavior: crate::parser::config::ElementBehavior<Inline>,
-    mut inner: P,
-) -> impl Parser<&'a str, Output = Vec<()>, Error = nom::error::Error<&'a str>>
-where
-    P: Parser<&'a str, Output = (), Error = nom::error::Error<&'a str>>,
-{
-    let behavior: crate::parser::config::ElementBehavior<()> = match behavior {
-        super::config::ElementBehavior::Parse => super::config::ElementBehavior::Parse,
-        super::config::ElementBehavior::Ignore => super::config::ElementBehavior::Ignore,
-        super::config::ElementBehavior::Skip => super::config::ElementBehavior::Skip,
-        super::config::ElementBehavior::Map(_) => super::config::ElementBehavior::Parse,
-        super::config::ElementBehavior::FlatMap(_) => super::config::ElementBehavior::Parse,
-    };
-    move |input: &'a str| {
-        let inner1 = |s: &'a str| inner.parse(s);
-        conditional(behavior.clone(), vec![()], inner1).parse(input)
-    }
-}
-
 pub(crate) fn conditional_block<'a, P>(
     behavior: crate::parser::config::ElementBehavior<Block>,
     mut inner: P,

@@ -1,9 +1,9 @@
+use crate::ast::Inline;
 use crate::parser::MarkdownParserState;
-use crate::{ast::Inline, parser::util::conditional_inline_unit};
 use nom::{
     branch::alt,
     character::complete::{anychar, char, one_of},
-    combinator::{map, not, peek, recognize, value},
+    combinator::{map, opt},
     multi::many1,
     sequence::preceded,
     IResult, Parser,
@@ -21,10 +21,7 @@ pub(crate) fn text<'a>(
                     crate::parser::inline::html_entity::html_entity(state.clone()),
                     |c| c.to_string(),
                 ),
-                map(
-                    recognize(many1(preceded(peek(is_text(state.clone())), anychar))),
-                    |c| c.to_string(),
-                ),
+                map(plain_run, |c| c.to_string()),
             ))),
             |vec| Inline::Text(vec.join("")),
         )
@@ -32,87 +29,112 @@ pub(crate) fn text<'a>(
     }
 }
 
-fn is_text<'a>(state: Rc<MarkdownParserState>) -> impl FnMut(&'a str) -> IResult<&'a str, ()> {
-    move |input: &'a str| not(not_a_text(state.clone())).parse(input)
+/// A character that may start an inline element but did not, consumed as literal text
+/// together with the plain run that follows it.
+///
+/// Used as the last alternative of the inline parser. The following run is attached
+/// here (instead of being left to the next `text` call) so that backslash escapes
+/// are only interpreted at the start of a text element, exactly as before the
+/// lookahead-free rewrite. Consecutive text elements are merged afterwards.
+pub(crate) fn literal_char(input: &str) -> IResult<&str, Inline> {
+    map((anychar, opt(plain_run)), |(c, run)| {
+        let mut s = c.to_string();
+        s.push_str(run.unwrap_or_default());
+        Inline::Text(s)
+    })
+    .parse(input)
 }
 
-fn not_a_text<'a>(
-    state: Rc<MarkdownParserState>,
-) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<()>> {
-    move |input: &'a str| {
-        alt((
-            alt((
-                conditional_inline_unit(
-                    state.config.inline_autolink_behavior.clone(),
-                    value((), crate::parser::inline::autolink::autolink),
-                ),
-                conditional_inline_unit(
-                    state.config.inline_reference_link_behavior.clone(),
-                    value(
-                        (),
-                        crate::parser::inline::reference_link::reference_link(state.clone()),
-                    ),
-                ),
-                conditional_inline_unit(
-                    state.config.inline_hard_newline_behavior.clone(),
-                    value((), crate::parser::inline::hard_newline::hard_newline),
-                ),
-                conditional_inline_unit(
-                    state.config.inline_text_behavior.clone(),
-                    value(
-                        (),
-                        crate::parser::inline::html_entity::html_entity(state.clone()),
-                    ),
-                ),
-                conditional_inline_unit(
-                    state.config.inline_image_behavior.clone(),
-                    value((), crate::parser::inline::image::image(state.clone())),
-                ),
-            )),
-            alt((
-                conditional_inline_unit(
-                    state.config.inline_link_behavior.clone(),
-                    value(
-                        (),
-                        crate::parser::inline::inline_link::inline_link(state.clone()),
-                    ),
-                ),
-                conditional_inline_unit(
-                    state.config.inline_code_span_behavior.clone(),
-                    value((), crate::parser::inline::code_span::code_span),
-                ),
-                conditional_inline_unit(
-                    state.config.inline_emphasis_behavior.clone(),
-                    value((), crate::parser::inline::emphasis::emphasis(state.clone())),
-                ),
-                conditional_inline_unit(
-                    state.config.inline_footnote_reference_behavior.clone(),
-                    value(
-                        (),
-                        crate::parser::inline::footnote_reference::footnote_reference,
-                    ),
-                ),
-                conditional_inline_unit(
-                    state.config.inline_strikethrough_behavior.clone(),
-                    value(
-                        (),
-                        crate::parser::inline::strikethrough::strikethrough(state.clone()),
-                    ),
-                ),
-            )),
-            map(
-                value(
-                    (),
-                    map(
-                        crate::parser::inline::environment_variable::environment_variable,
-                        |_| (),
-                    ),
-                ),
-                |_| vec![()],
-            ),
-        ))
-        .parse(input)
+/// Characters that may start an inline element other than text.
+///
+/// The run of plain text stops at these positions so that the inline parser gets a
+/// chance to match an element there. The set must contain the first character of
+/// every inline element parser: `&` (entity), `<` (autolink), `[` (links, footnote
+/// reference), `!` (image), `` ` `` (code span), `*` / `_` (emphasis) and `~`
+/// (strikethrough). A backslash is only special before a line ending (hard line
+/// break); elsewhere it stays in the run, see [`literal_char`].
+fn is_special(c: char) -> bool {
+    matches!(c, '&' | '<' | '[' | '!' | '`' | '*' | '_' | '~')
+}
+
+fn is_word_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_'
+}
+
+/// Longest identifier the `environment_variable` parser would accept; longer ones are
+/// rejected by it anyway, so skipping them keeps the scan linear.
+const MAX_ENV_VAR_LEN: usize = 50;
+
+/// The longest run of plain text starting at `input`.
+///
+/// This is a single linear pass instead of a full lookahead of every inline parser at
+/// every character (which made the parse time exponential in the nesting depth):
+///
+/// - stops at [`is_special`] characters;
+/// - stops at a backslash or a space that starts a hard line break;
+/// - an identifier that looks like an environment variable (`FOO_BAR`) is consumed
+///   whole, so that its underscores are not taken as emphasis markers. This mirrors
+///   the `environment_variable` parser, which produces plain text anyway.
+fn plain_run(input: &str) -> IResult<&str, &str> {
+    let mut pos = 0;
+
+    while pos < input.len() {
+        let rest = &input[pos..];
+        let c = rest.chars().next().unwrap();
+
+        if is_special(c) {
+            break;
+        }
+
+        if (c == ' ' || c == '\\') && is_hard_break_start(rest) {
+            break;
+        }
+
+        if c.is_ascii_alphabetic() && identifier_fits(rest) {
+            if let Ok((after, _)) =
+                crate::parser::inline::environment_variable::environment_variable(rest)
+            {
+                pos += rest.len() - after.len();
+                continue;
+            }
+        }
+
+        pos += c.len_utf8();
     }
+
+    if pos == 0 {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::TakeWhile1,
+        )));
+    }
+
+    Ok((&input[pos..], &input[..pos]))
+}
+
+/// Whether the `[A-Za-z0-9_]+` word starting at `rest` is short enough to be an
+/// environment variable. Looks at a bounded window so that a long word is not
+/// rescanned from every one of its characters.
+fn identifier_fits(rest: &str) -> bool {
+    rest.bytes()
+        .take(MAX_ENV_VAR_LEN + 1)
+        .position(|b| !is_word_char(b as char))
+        .is_some_and(|len| len <= MAX_ENV_VAR_LEN)
+        || rest.len() <= MAX_ENV_VAR_LEN
+}
+
+/// `\` or two or more spaces, followed by a line ending (see `hard_newline`).
+fn is_hard_break_start(rest: &str) -> bool {
+    let after = if let Some(after) = rest.strip_prefix('\\') {
+        after
+    } else {
+        let trimmed = rest.trim_start_matches(' ');
+        if rest.len() - trimmed.len() < 2 {
+            return false;
+        }
+        trimmed
+    };
+    after.starts_with('\n') || after.starts_with("\r\n")
 }
 
 fn escaped_char(input: &str) -> IResult<&str, char> {
