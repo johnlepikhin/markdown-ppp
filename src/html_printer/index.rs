@@ -98,9 +98,7 @@ fn collect_inline_refs(footnotes: &mut FootnoteIndex, inline: &Inline) {
         Inline::FootnoteReference(label) => {
             footnotes.add(label.clone());
         }
-        Inline::Emphasis(children)
-        | Inline::Strong(children)
-        | Inline::Strikethrough(children) => {
+        Inline::Emphasis(children) | Inline::Strong(children) | Inline::Strikethrough(children) => {
             for child in children {
                 collect_inline_refs(footnotes, child);
             }

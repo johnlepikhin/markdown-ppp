@@ -1,3 +1,4 @@
+use crate::parser::util::char_m_n;
 use crate::parser::MarkdownParserState;
 use nom::{
     branch::alt,
@@ -6,7 +7,7 @@ use nom::{
         alpha1, alphanumeric1, anychar, char, line_ending, one_of, satisfy, space0, space1,
     },
     combinator::{eof, not, opt, peek, recognize, value, verify},
-    multi::{many0, many1, many_m_n},
+    multi::{many0, many1},
     sequence::{delimited, pair, preceded, terminated},
     IResult, Parser,
 };
@@ -42,7 +43,7 @@ fn html_block1(_state: Rc<MarkdownParserState>) -> impl FnMut(&str) -> IResult<&
         let end_parser = || delimited(tag("</"), tag_variant_parser(), char('>'));
 
         preceded(
-            many_m_n(0, 3, char(' ')),
+            char_m_n(0, 3, ' '),
             recognize((
                 char('<'),
                 tag_variant_parser(),
@@ -62,7 +63,7 @@ fn html_block1(_state: Rc<MarkdownParserState>) -> impl FnMut(&str) -> IResult<&
 fn html_block2(_state: Rc<MarkdownParserState>) -> impl FnMut(&str) -> IResult<&str, &str> {
     move |input: &str| {
         preceded(
-            many_m_n(0, 3, char(' ')),
+            char_m_n(0, 3, ' '),
             recognize((
                 tag("<!--"),
                 many0(pair(peek(not(tag("-->"))), anychar)),
@@ -76,7 +77,7 @@ fn html_block2(_state: Rc<MarkdownParserState>) -> impl FnMut(&str) -> IResult<&
 fn html_block3(_state: Rc<MarkdownParserState>) -> impl FnMut(&str) -> IResult<&str, &str> {
     move |input: &str| {
         preceded(
-            many_m_n(0, 3, char(' ')),
+            char_m_n(0, 3, ' '),
             recognize((
                 tag("<?"),
                 many0(pair(peek(not(tag("?>"))), anychar)),
@@ -90,7 +91,7 @@ fn html_block3(_state: Rc<MarkdownParserState>) -> impl FnMut(&str) -> IResult<&
 fn html_block4(_state: Rc<MarkdownParserState>) -> impl FnMut(&str) -> IResult<&str, &str> {
     move |input: &str| {
         preceded(
-            many_m_n(0, 3, char(' ')),
+            char_m_n(0, 3, ' '),
             recognize((
                 tag("<!"),
                 satisfy(|c| c.is_ascii_uppercase()),
@@ -105,7 +106,7 @@ fn html_block4(_state: Rc<MarkdownParserState>) -> impl FnMut(&str) -> IResult<&
 fn html_block5(_state: Rc<MarkdownParserState>) -> impl FnMut(&str) -> IResult<&str, &str> {
     move |input: &str| {
         preceded(
-            many_m_n(0, 3, char(' ')),
+            char_m_n(0, 3, ' '),
             recognize((
                 tag("<![CDATA["),
                 many0(pair(peek(not(tag("]]>"))), anychar)),
@@ -200,7 +201,7 @@ fn html_block6(_state: Rc<MarkdownParserState>) -> impl FnMut(&str) -> IResult<&
         };
 
         preceded(
-            many_m_n(0, 3, char(' ')),
+            char_m_n(0, 3, ' '),
             recognize((
                 alt((value((), tag("</")), value((), char('<')))),
                 tag_variant,
@@ -228,7 +229,7 @@ fn html_block7(_state: Rc<MarkdownParserState>) -> impl FnMut(&str) -> IResult<&
         };
 
         preceded(
-            many_m_n(0, 3, char(' ')),
+            char_m_n(0, 3, ' '),
             recognize((
                 alt((
                     complete_open_html_tag(&["script", "pre", "style"]),

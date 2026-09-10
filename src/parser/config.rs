@@ -2,6 +2,7 @@ use nom::IResult;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::sync::{Arc, OnceLock};
 
 /// Function type for mapping elements.
 type ElementMapFn<ELT> = Rc<RefCell<Box<dyn FnMut(ELT) -> ELT>>>;
@@ -46,8 +47,9 @@ pub struct MarkdownParserConfig {
     /// If true, the parser will allow headings without a space after the hash marks.
     pub(crate) allow_no_space_in_headings: bool,
 
-    /// A map of HTML entities to their corresponding `Entity` structs.
-    pub(crate) html_entities_map: HashMap<String, &'static entities::Entity>,
+    /// A map of HTML entities to their corresponding `Entity` structs. Shared, so
+    /// that the default table is built once per process rather than once per parse.
+    pub(crate) html_entities_map: Arc<HashMap<String, &'static entities::Entity>>,
 
     /// Maximum nesting depth of container blocks and inline elements.
     /// See [`MarkdownParserConfig::with_max_nesting_depth`].
@@ -161,12 +163,17 @@ impl Default for MarkdownParserConfig {
 }
 
 impl MarkdownParserConfig {
-    fn make_html_entities_map() -> HashMap<String, &'static entities::Entity> {
-        let mut map = HashMap::new();
-        for entity in entities::ENTITIES.iter() {
-            map.insert(entity.entity.to_string(), entity);
-        }
-        map
+    fn make_html_entities_map() -> Arc<HashMap<String, &'static entities::Entity>> {
+        static DEFAULT: OnceLock<Arc<HashMap<String, &'static entities::Entity>>> = OnceLock::new();
+        DEFAULT
+            .get_or_init(|| {
+                let mut map = HashMap::with_capacity(entities::ENTITIES.len());
+                for entity in entities::ENTITIES.iter() {
+                    map.insert(entity.entity.to_string(), entity);
+                }
+                Arc::new(map)
+            })
+            .clone()
     }
 
     /// Enable the parser to allow headings without a space after the hash marks.
@@ -200,7 +207,7 @@ impl MarkdownParserConfig {
         html_entities_map: HashMap<String, &'static entities::Entity>,
     ) -> Self {
         Self {
-            html_entities_map,
+            html_entities_map: Arc::new(html_entities_map),
             ..self
         }
     }

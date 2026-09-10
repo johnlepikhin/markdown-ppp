@@ -166,16 +166,17 @@ pub fn render_html(ast: &Document, config: crate::html_printer::config::Config) 
     let doc = ast.to_doc(&state);
 
     let mut buf = Vec::new();
-    doc.render(state.config.width, &mut buf).expect("Vec<u8> write is infallible");
+    doc.render(state.config.width, &mut buf)
+        .expect("Vec<u8> write is infallible");
     String::from_utf8(buf).expect("pretty crate always produces valid UTF-8")
 }
 
 trait ToDoc<'a> {
-    fn to_doc(&self, state: &'a State<'a>) -> DocBuilder<'a, Arena<'a>, ()>;
+    fn to_doc(&'a self, state: &'a State<'a>) -> DocBuilder<'a, Arena<'a>, ()>;
 }
 
 impl<'a> ToDoc<'a> for Document {
-    fn to_doc(&self, state: &'a State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
+    fn to_doc(&'a self, state: &'a State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
         self.blocks.to_doc(state)
     }
 }

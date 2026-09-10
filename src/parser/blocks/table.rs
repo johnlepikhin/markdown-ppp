@@ -1,7 +1,7 @@
 use super::{eof_or_eol, line_terminated};
 use crate::ast::{Alignment, Inline, Table, TableRow};
+use crate::parser::util::char_m_n;
 use crate::parser::MarkdownParserState;
-use nom::multi::many_m_n;
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -89,7 +89,7 @@ fn parse_alignment_row(input: &str) -> IResult<&str, Vec<Alignment>> {
     );
 
     line_terminated(preceded(
-        many_m_n(0, 3, char(' ')),
+        char_m_n(0, 3, ' '),
         delimited(
             char('|'),
             separated_list1(char('|'), map(alignment_parser, parse_cell_alignment)),
@@ -104,7 +104,7 @@ fn parse_table_row<'a>(
 ) -> impl FnMut(&'a str) -> IResult<&'a str, TableRow> {
     move |input: &'a str| {
         line_terminated(preceded(
-            many_m_n(0, 3, char(' ')),
+            char_m_n(0, 3, ' '),
             delimited(
                 char('|'),
                 separated_list1(char('|'), cell_content(state.clone())),

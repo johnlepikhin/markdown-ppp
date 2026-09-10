@@ -1,4 +1,5 @@
 use crate::ast::{ListBulletKind, ListItem, ListKind, ListOrderedKindOptions, TaskState};
+use crate::parser::util::char_m_n;
 use crate::parser::util::*;
 use crate::parser::MarkdownParserState;
 use nom::combinator::verify;
@@ -6,7 +7,7 @@ use nom::{
     branch::alt,
     character::complete::{char, one_of, space0},
     combinator::{map, not, opt, peek, recognize, value},
-    multi::{many0, many1, many_m_n},
+    multi::{many0, many1},
     sequence::{delimited, preceded, terminated},
     IResult, Parser,
 };
@@ -54,74 +55,48 @@ fn list_marker_ordered(input: &str) -> IResult<&str, ListKind> {
     .parse(input)
 }
 
-fn list_marker_followed_by_spaces(
-    input: &str,
-) -> IResult<&str, (ListKind, usize, Option<TaskState>)> {
-    let (remaining, kind) = delimited(
-        many_m_n(0, 3, char(' ')),
-        list_marker,
-        many_m_n(1, 4, char(' ')),
-    )
-    .parse(input)?;
-
-    let consumed = input.len() - remaining.len();
-
-    let (input, task_state) = opt(terminated(list_item_task_state, char(' '))).parse(remaining)?;
-
-    Ok((input, (kind, consumed, task_state)))
-}
-
-fn list_marker_followed_by_newline(
-    input: &str,
-) -> IResult<&str, (ListKind, usize, Option<TaskState>)> {
-    let (remaining, kind) = preceded(many_m_n(0, 3, char(' ')), list_marker).parse(input)?;
-
-    // Cases:
-    // 1.
-    // 1.____
-    if let Ok((tail, _)) = line_terminated(space0).parse(remaining) {
-        // Calculate prefix length: consumed + 1 space
-        let consumed = input.len() - remaining.len() + 1;
-
-        return Ok((tail, (kind, consumed, None)));
-    }
-
-    let (remaining, _) = many_m_n(0, 3, char(' ')).parse(remaining)?;
-    let consumed = input.len() - remaining.len() + 1;
-
-    let (remaining, task_state) = line_terminated(list_item_task_state).parse(remaining)?;
-
-    Ok((remaining, (kind, consumed, Some(task_state))))
-}
-
+/// The marker of a list item and what follows it on the line: the list kind, the
+/// content indentation (marker width plus the spaces after it), the task state and
+/// the first line of content (empty when the marker ends the line).
 pub(crate) fn list_marker_with_span_size(
     input: &str,
-) -> IResult<&str, (ListKind, usize, Option<TaskState>, String)> {
-    alt((
-        map(
-            list_marker_followed_by_newline,
-            |(list_kind, prefix_length, task_state)| {
-                (list_kind, prefix_length, task_state, String::new())
-            },
-        ),
-        (map(
-            (
-                list_marker_followed_by_spaces,
-                line_terminated(not_eof_or_eol0),
-            ),
-            |((list_kind, prefix_length, task_state), s)| {
-                (list_kind, prefix_length, task_state, s.to_string())
-            },
-        )),
-    ))
-    .parse(input)
+) -> IResult<&str, (ListKind, usize, Option<TaskState>, &str)> {
+    let (after_marker, kind) = preceded(char_m_n(0, 3, ' '), list_marker).parse(input)?;
+
+    // Marker alone on its line:
+    // 1.
+    // 1.____
+    if let Ok((tail, _)) = line_terminated(space0).parse(after_marker) {
+        let consumed = input.len() - after_marker.len() + 1;
+        return Ok((tail, (kind, consumed, None, "")));
+    }
+
+    // Marker followed by a task box alone on its line: `- [ ]`
+    if let Ok((remaining, _)) = char_m_n(0, 3, ' ').parse(after_marker) {
+        if let Ok((remaining, task_state)) = line_terminated(list_item_task_state).parse(remaining)
+        {
+            let consumed = input.len() - after_marker.len() + 1;
+            return Ok((remaining, (kind, consumed, Some(task_state), "")));
+        }
+    }
+
+    // Marker, one to four spaces, then content.
+    let (remaining, _) = char_m_n(1, 4, ' ').parse(after_marker)?;
+    let consumed = input.len() - remaining.len();
+    let (remaining, task_state) =
+        opt(terminated(list_item_task_state, char(' '))).parse(remaining)?;
+    let (remaining, first_line) = line_terminated(not_eof_or_eol0).parse(remaining)?;
+
+    Ok((remaining, (kind, consumed, task_state, first_line)))
 }
 
+/// One continuation line of a list item, as the pieces to append after a `\n`:
+/// the blank lines that precede it (possibly empty) and the line itself.
 fn list_item_rest_line(
     state: Rc<MarkdownParserState>,
     list_kind: ListKind,
     prefix_length: usize,
-) -> impl FnMut(&str) -> IResult<&str, Vec<&str>> {
+) -> impl FnMut(&str) -> IResult<&str, (&str, &str)> {
     move |input: &str| {
         // Stop parsing lines on EOF
         if input.is_empty() {
@@ -148,7 +123,7 @@ fn list_item_rest_line(
                     (),
                     (
                         verify(
-                            recognize(many_m_n(0, prefix_length, char(' '))),
+                            recognize(char_m_n(0, prefix_length, ' ')),
                             |indent: &str| indent.len() < prefix_length,
                         ),
                         marker_parser,
@@ -158,19 +133,13 @@ fn list_item_rest_line(
             alt((
                 // If starts with 0 <= prefix_length spaces
                 preceded(
-                    many_m_n(0, prefix_length, char(' ')),
-                    map(not_eof_or_eol1, |v| vec![v]),
+                    char_m_n(0, prefix_length, ' '),
+                    map(not_eof_or_eol1, |v| ("", v)),
                 ),
                 // If this is empty line, followed by prefix_length spaces
-                map(
-                    (
-                        recognize(many1(line_terminated(space0))),
-                        preceded(
-                            many_m_n(prefix_length, prefix_length, char(' ')),
-                            not_eof_or_eol1,
-                        ),
-                    ),
-                    |(newlines, content)| vec![newlines, content],
+                (
+                    recognize(many1(line_terminated(space0))),
+                    preceded(char_m_n(prefix_length, prefix_length, ' '), not_eof_or_eol1),
                 ),
             )),
         ))
@@ -182,7 +151,7 @@ fn list_item_lines(
     state: Rc<MarkdownParserState>,
     list_kind: ListKind,
     prefix_length: usize,
-) -> impl FnMut(&str) -> IResult<&str, Vec<Vec<&str>>> {
+) -> impl FnMut(&str) -> IResult<&str, Vec<(&str, &str)>> {
     move |input: &str| {
         many0(list_item_rest_line(
             state.clone(),
@@ -203,24 +172,30 @@ pub(crate) fn list_item(
         let (input, rest_lines) =
             list_item_lines(state.clone(), list_kind.clone(), item_prefix_length).parse(input)?;
 
-        let total_size = first_line.len() + rest_lines.len();
-        let mut item_content = String::with_capacity(total_size);
-        if !first_line.is_empty() {
-            item_content.push_str(&first_line)
-        }
-        for line in rest_lines {
-            item_content.push('\n');
-            for subline in line {
-                item_content.push_str(subline)
+        // A one-line item is parsed in place; only a multi-line item is joined.
+        let joined;
+        let item_content: &str = if rest_lines.is_empty() {
+            first_line
+        } else {
+            let total_size = first_line.len()
+                + rest_lines
+                    .iter()
+                    .map(|(blank, line)| 1 + blank.len() + line.len())
+                    .sum::<usize>();
+            let mut buf = String::with_capacity(total_size);
+            buf.push_str(first_line);
+            for (blank, line) in rest_lines {
+                buf.push('\n');
+                buf.push_str(blank);
+                buf.push_str(line);
             }
-        }
+            joined = buf;
+            &joined
+        };
 
         let nested_state = Rc::new(state.nested());
-        let (_, blocks) = many0(crate::parser::blocks::block(nested_state))
-            .parse(&item_content)
+        let (_, blocks) = crate::parser::blocks::blocks_many0(nested_state, item_content)
             .map_err(|err| err.map_input(|_| input))?;
-
-        let blocks = blocks.into_iter().flatten().collect();
 
         let item = ListItem {
             task: task_state,

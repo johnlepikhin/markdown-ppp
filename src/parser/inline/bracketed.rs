@@ -11,7 +11,7 @@ use crate::ast::{Inline, Link, LinkReference};
 use crate::parser::link_util::{
     link_destination, link_label_content, link_label_raw, link_title, MAX_LINK_LABEL_DEPTH,
 };
-use crate::parser::util::conditional_inline;
+use crate::parser::util::{conditional_inline, Pieces};
 use crate::parser::MarkdownParserState;
 use nom::{
     branch::alt,
@@ -26,7 +26,7 @@ use std::rc::Rc;
 
 pub(crate) fn bracketed_element<'a>(
     state: Rc<MarkdownParserState>,
-) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<Inline>> {
+) -> impl FnMut(&'a str) -> IResult<&'a str, Pieces<Inline>> {
     move |input: &'a str| {
         // Past the label nesting limit only a footnote reference can match; skip the
         // balanced-bracket scan, which would otherwise be repeated for every `[`.
@@ -41,20 +41,21 @@ pub(crate) fn bracketed_element<'a>(
 
         let (rest, raw) = link_label_raw(&state, input)?;
 
-        // Inline content of the label, parsed on first use and shared by the variants.
-        let label_cache: RefCell<Option<Vec<Inline>>> = RefCell::new(None);
+        // Inline content of the label. Every variant checks its own syntax first and
+        // asks for the label last, so a successful parse is handed over without a
+        // copy; only a failure is remembered, so that the variants do not repeat it.
+        let label_error: RefCell<Option<nom::Err<nom::error::Error<&'a str>>>> = RefCell::new(None);
         let label = || -> Result<Vec<Inline>, nom::Err<nom::error::Error<&'a str>>> {
-            if let Some(label) = label_cache.borrow().as_ref() {
-                return Ok(label.clone());
+            if let Some(err) = label_error.borrow().as_ref() {
+                return Err(err.clone());
             }
-            let label = link_label_content(state.clone(), &raw, input)?;
-            *label_cache.borrow_mut() = Some(label.clone());
-            Ok(label)
+            link_label_content(state.clone(), &raw, input).inspect_err(|err| {
+                *label_error.borrow_mut() = Some(err.clone());
+            })
         };
 
         // [text](destination "title")
         let inline_link = |_: &'a str| {
-            let children = label()?;
             let (rest, (destination, title)) = delimited(
                 char('('),
                 (
@@ -64,6 +65,7 @@ pub(crate) fn bracketed_element<'a>(
                 preceded(multispace0, char(')')),
             )
             .parse(rest)?;
+            let children = label()?;
             Ok((
                 rest,
                 Inline::Link(Link {
@@ -85,16 +87,22 @@ pub(crate) fn bracketed_element<'a>(
 
         // [text][label]
         let reference_full = |_: &'a str| {
-            let text = label()?;
             let (rest, label_raw) = link_label_raw(&state, rest)?;
-            let label = link_label_content(state.clone(), &label_raw, input)?;
-            Ok((rest, Inline::LinkReference(LinkReference { label, text })))
+            let target = link_label_content(state.clone(), &label_raw, input)?;
+            let text = label()?;
+            Ok((
+                rest,
+                Inline::LinkReference(LinkReference {
+                    label: target,
+                    text,
+                }),
+            ))
         };
 
         // [label][]
         let reference_collapsed = |_: &'a str| {
-            let text = label()?;
             let (rest, _) = tag("[]").parse(rest)?;
+            let text = label()?;
             Ok((
                 rest,
                 Inline::LinkReference(LinkReference {

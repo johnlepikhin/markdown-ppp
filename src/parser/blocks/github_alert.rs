@@ -1,4 +1,5 @@
 use crate::ast::{Block, GitHubAlert, GitHubAlertType};
+use crate::parser::util::char_m_n;
 use crate::parser::util::*;
 use crate::parser::MarkdownParserState;
 use nom::{
@@ -6,7 +7,7 @@ use nom::{
     bytes::complete::tag,
     character::complete::{alpha1, char, satisfy},
     combinator::{opt, recognize},
-    multi::{many0, many1, many_m_n},
+    multi::{many0, many1},
     sequence::{delimited, pair, preceded},
     IResult, Parser,
 };
@@ -49,7 +50,7 @@ pub(crate) fn github_alert<'a>(
 ) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<Block>> {
     move |input: &'a str| {
         // Try to parse as a blockquote first
-        let prefix = preceded(many_m_n(0, 3, char(' ')), char('>'));
+        let prefix = preceded(char_m_n(0, 3, ' '), char('>'));
 
         // Peek at the first line to check if it starts with an alert marker
         let (_remaining, first_line) =
@@ -69,7 +70,7 @@ pub(crate) fn github_alert<'a>(
         // Now parse the rest of the blockquote lines
         // Block quote marker: 0-3 leading spaces, '>', optional space
         // Per CommonMark spec, the space after '>' is part of the marker and should be stripped
-        let prefix = preceded(many_m_n(0, 3, char(' ')), (char('>'), opt(char(' '))));
+        let prefix = preceded(char_m_n(0, 3, ' '), (char('>'), opt(char(' '))));
         let (input, lines) =
             many1(preceded(prefix, line_terminated(not_eof_or_eol0))).parse(input)?;
 
@@ -84,14 +85,19 @@ pub(crate) fn github_alert<'a>(
         // Parse the inner content as blocks
         let nested_state = Rc::new(state.nested());
         let (_, blocks) = if !inner.is_empty() {
-            many1(crate::parser::blocks::block(nested_state))
-                .parse(&inner)
-                .map_err(|err| err.map_input(|_| input))?
+            let (rest, blocks) = crate::parser::blocks::blocks_many0(nested_state, &inner)
+                .map_err(|err| err.map_input(|_| input))?;
+            if blocks.is_empty() {
+                // `many1`: the content must yield at least one block.
+                return Err(nom::Err::Error(nom::error::Error::new(
+                    input,
+                    nom::error::ErrorKind::Many1,
+                )));
+            }
+            (rest, blocks)
         } else {
             ("", vec![])
         };
-
-        let blocks = blocks.into_iter().flatten().collect();
 
         Ok((
             input,

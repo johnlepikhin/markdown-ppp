@@ -56,7 +56,7 @@ impl GitHubAlertType {
 }
 
 impl<'a> ToDoc<'a> for GitHubAlert {
-    fn to_doc(&self, state: &'a State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
+    fn to_doc(&'a self, state: &'a State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
         // Generate GitHub-style alert HTML
         let icon = state.arena.text(self.alert_type.svg_icon());
         let title = tag(
@@ -64,7 +64,11 @@ impl<'a> ToDoc<'a> for GitHubAlert {
             "p",
             vec![("class".to_owned(), "markdown-alert-title".to_owned())],
             // `Custom` carries user text, so the title is a text node, not markup.
-            icon.append(state.arena.text(escape(&self.alert_type.html_title()))),
+            icon.append(
+                state
+                    .arena
+                    .text(escape(&self.alert_type.html_title()).into_owned()),
+            ),
         );
 
         let content = state

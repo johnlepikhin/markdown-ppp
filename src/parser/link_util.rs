@@ -1,25 +1,16 @@
-use nom::character::complete::{anychar, char, one_of, satisfy};
+use nom::character::complete::{anychar, char, one_of};
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    combinator::{map, not, peek},
-    multi::{fold_many0, many0},
+    combinator::{not, peek},
+    multi::many0,
     sequence::{delimited, preceded},
     IResult, Parser,
 };
+use std::borrow::Cow;
 use std::rc::Rc;
 
 use super::MarkdownParserState;
-
-pub(crate) fn link_label<'a>(
-    state: Rc<MarkdownParserState>,
-) -> impl FnMut(&'a str) -> IResult<&'a str, Vec<crate::ast::Inline>> {
-    move |input: &'a str| {
-        let (rest, raw) = link_label_raw(&state, input)?;
-        let label = link_label_content(state.clone(), &raw, input)?;
-        Ok((rest, label))
-    }
-}
 
 /// `[label]` with balanced nested brackets, without parsing the label content.
 ///
@@ -29,7 +20,7 @@ pub(crate) fn link_label<'a>(
 pub(crate) fn link_label_raw<'a>(
     state: &MarkdownParserState,
     input: &'a str,
-) -> IResult<&'a str, String> {
+) -> IResult<&'a str, Cow<'a, str>> {
     if !input.starts_with('[') {
         return Err(nom::Err::Error(nom::error::Error::new(
             input,
@@ -42,10 +33,7 @@ pub(crate) fn link_label_raw<'a>(
         .as_ref()
         .and_then(|index| index.covers(input).then(|| index.bracket_match(input)));
     match indexed {
-        Some(Some(close)) => {
-            let raw = unescape_label(&input[1..close]);
-            Ok((&input[close + 1..], raw))
-        }
+        Some(Some(close)) => Ok((&input[close + 1..], unescape_label(&input[1..close]))),
         Some(None) => Err(nom::Err::Error(nom::error::Error::new(
             input,
             nom::error::ErrorKind::Tag,
@@ -56,7 +44,10 @@ pub(crate) fn link_label_raw<'a>(
 
 /// Label text between the brackets, with `\]` resolved to `]` and every other escape
 /// pair kept verbatim (the same result `balanced_brackets_content` produces).
-fn unescape_label(raw: &str) -> String {
+fn unescape_label(raw: &str) -> Cow<'_, str> {
+    if !raw.contains('\\') {
+        return Cow::Borrowed(raw);
+    }
     let mut out = String::with_capacity(raw.len());
     let mut rest = raw;
     while let Some(pos) = rest.find('\\') {
@@ -79,7 +70,7 @@ fn unescape_label(raw: &str) -> String {
         }
     }
     out.push_str(rest);
-    out
+    Cow::Owned(out)
 }
 
 /// Parse the raw label text (from [`link_label_raw`]) as inline elements.
@@ -154,10 +145,6 @@ fn title_end_slow(input: &str, delim: u8) -> Option<usize> {
     None
 }
 
-fn escaped_char(input: &str) -> IResult<&str, char> {
-    preceded(tag("\\"), anychar).parse(input)
-}
-
 /// Whether `\c` is a backslash escape per CommonMark: only ASCII punctuation can be
 /// escaped, every other `\c` is two literal characters.
 fn is_escapable(c: char) -> bool {
@@ -207,51 +194,61 @@ pub(crate) const MAX_LINK_LABEL_DEPTH: usize = 8;
 /// Parses content inside square brackets, handling nested brackets and escapes.
 /// Returns the raw string content (including nested bracket pairs).
 /// Escaped brackets (\[ and \]) are converted to their literal characters.
-fn balanced_brackets_content(input: &str) -> IResult<&str, String> {
+fn balanced_brackets_content(input: &str) -> IResult<&str, Cow<'_, str>> {
     balanced_brackets_content_with_depth(input, 0)
 }
 
 /// Internal implementation with depth tracking to prevent stack overflow.
-fn balanced_brackets_content_with_depth(input: &str, depth: usize) -> IResult<&str, String> {
-    fold_many0(
-        move |i| {
-            alt((
-                // Escaped ] - needed for balanced bracket parsing (consume backslash)
-                map(preceded(char('\\'), char(']')), |c| c.to_string()),
-                // Other escaped characters (including \[) - preserve backslash for inline parsing
-                map(escaped_char, |c| format!("\\{c}")),
-                // Nested brackets - recursively parse if depth allows
-                move |i| {
-                    if depth < MAX_BRACKET_DEPTH {
-                        balanced_brackets_with_depth(i, depth).map(|(i, s)| (i, format!("[{s}]")))
-                    } else {
-                        // At max depth, treat [ as a literal character
-                        map(char('['), |c| c.to_string()).parse(i)
-                    }
-                },
-                // Any character except [ ] \
-                map(satisfy(|c| c != '[' && c != ']' && c != '\\'), |c| {
-                    c.to_string()
-                }),
-            ))
-            .parse(i)
-        },
-        String::new,
-        |mut acc, item| {
-            acc.push_str(&item);
-            acc
-        },
-    )
-    .parse(input)
-}
-
-/// Parses a balanced pair of square brackets: [content]
-/// Returns the content without the outer brackets.
-fn balanced_brackets_with_depth(input: &str, depth: usize) -> IResult<&str, String> {
-    let (input, _) = char('[').parse(input)?;
-    let (input, content) = balanced_brackets_content_with_depth(input, depth + 1)?;
-    let (input, _) = char(']').parse(input)?;
-    Ok((input, content))
+///
+/// A single linear scan: `\]` becomes `]`, any other escape pair is kept verbatim
+/// for the inline parser, `[` opens a nested group (a literal `[` beyond
+/// `MAX_BRACKET_DEPTH`), and the content ends at the `]` that closes the current
+/// group, or at a trailing backslash with nothing after it.
+fn balanced_brackets_content_with_depth(input: &str, depth: usize) -> IResult<&str, Cow<'_, str>> {
+    // First pass: find the end without copying. Only a `\\]` changes the text, in
+    // which case a second pass builds the unescaped string.
+    let bytes = input.as_bytes();
+    let mut level = depth;
+    let mut pos = 0;
+    let mut has_escaped_bracket = false;
+    while pos < bytes.len() {
+        match bytes[pos] {
+            b'\\' => {
+                let Some(c) = input[pos + 1..].chars().next() else {
+                    break;
+                };
+                has_escaped_bracket |= c == ']';
+                pos += 1 + c.len_utf8();
+            }
+            b'[' => {
+                if level < MAX_BRACKET_DEPTH {
+                    level += 1;
+                }
+                pos += 1;
+            }
+            b']' => {
+                if level == depth {
+                    break;
+                }
+                level -= 1;
+                pos += 1;
+            }
+            _ => pos += 1,
+        }
+    }
+    let raw = &input[..pos];
+    if !has_escaped_bracket {
+        return Ok((&input[pos..], Cow::Borrowed(raw)));
+    }
+    let mut out = String::with_capacity(raw.len());
+    let mut rest = raw;
+    while let Some(i) = rest.find("\\]") {
+        out.push_str(&rest[..i]);
+        out.push(']');
+        rest = &rest[i + 2..];
+    }
+    out.push_str(rest);
+    Ok((&input[pos..], Cow::Owned(out)))
 }
 
 pub(crate) fn link_destination<'a>(

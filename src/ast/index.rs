@@ -129,12 +129,12 @@ mod tests {
 
     #[test]
     fn footnote_inside_blockquote() {
-        let ast = doc(vec![Block::BlockQuote(vec![
-            Block::FootnoteDefinition(FootnoteDefinition {
+        let ast = doc(vec![Block::BlockQuote(vec![Block::FootnoteDefinition(
+            FootnoteDefinition {
                 label: "quoted".into(),
                 blocks: vec![],
-            }),
-        ])]);
+            },
+        )])]);
         let indices = get_footnote_indices(&ast);
         assert_eq!(indices.len(), 1);
         assert_eq!(indices["quoted"], 1);

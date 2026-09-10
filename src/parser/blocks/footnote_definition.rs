@@ -1,11 +1,12 @@
 use crate::ast::FootnoteDefinition;
+use crate::parser::util::char_m_n;
 use crate::parser::util::{line_terminated, not_eof_or_eol1};
 use crate::parser::MarkdownParserState;
-use nom::character::complete::{char, none_of};
+use nom::character::complete::none_of;
 use nom::{
     bytes::complete::tag,
     combinator::{recognize, verify},
-    multi::{many0, many1, many_m_n},
+    multi::{many0, many1},
     sequence::preceded,
     IResult, Parser,
 };
@@ -16,11 +17,11 @@ use std::rc::Rc;
 /// Returns the label and the first content line. Used as a cheap lookahead that does
 /// not parse the footnote body.
 pub(crate) fn footnote_definition_start(input: &str) -> IResult<&str, (&str, &str)> {
-    let (input, _) = many_m_n(0, 3, char(' ')).parse(input)?;
+    let (input, _) = char_m_n(0, 3, ' ').parse(input)?;
     let (input, _) = tag("[^").parse(input)?;
     let (input, label) = recognize(many1(verify(none_of("]"), |c| *c != ']'))).parse(input)?;
     let (input, _) = tag("]:").parse(input)?;
-    let (input, _) = many_m_n(0, 3, char(' ')).parse(input)?;
+    let (input, _) = char_m_n(0, 3, ' ').parse(input)?;
     let (input, first_line) = line_terminated(not_eof_or_eol1).parse(input)?;
     Ok((input, (label, first_line)))
 }
@@ -31,7 +32,7 @@ pub(crate) fn footnote_definition<'a>(
     move |input: &'a str| {
         let (input, (label, first_line)) = footnote_definition_start(input)?;
         let (input, rest_lines) = many0(preceded(
-            many_m_n(3, 3, char(' ')),
+            char_m_n(3, 3, ' '),
             line_terminated(not_eof_or_eol1),
         ))
         .parse(input)?;
@@ -47,11 +48,8 @@ pub(crate) fn footnote_definition<'a>(
         }
 
         let nested_state = Rc::new(state.nested());
-        let (_, blocks) = many0(crate::parser::blocks::block(nested_state))
-            .parse(&footnote_content)
+        let (_, blocks) = crate::parser::blocks::blocks_many0(nested_state, &footnote_content)
             .map_err(|err| err.map_input(|_| input))?;
-
-        let blocks = blocks.into_iter().flatten().collect();
 
         let v = FootnoteDefinition {
             label: label.to_owned(),

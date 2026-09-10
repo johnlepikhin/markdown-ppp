@@ -3,7 +3,10 @@ use crate::plaintext_printer::ToDoc;
 use pretty::{Arena, DocAllocator, DocBuilder};
 
 fn is_visible_block(block: &Block) -> bool {
-    !matches!(block, Block::HtmlBlock(_) | Block::Definition(_) | Block::Empty)
+    !matches!(
+        block,
+        Block::HtmlBlock(_) | Block::Definition(_) | Block::Empty
+    )
 }
 
 impl<'a> ToDoc<'a> for Vec<Block> {
@@ -17,7 +20,9 @@ impl<'a> ToDoc<'a> for Vec<Block> {
         for (i, block) in visible.into_iter().enumerate() {
             result = result.append(block.to_doc(state));
             if i + 1 < len {
-                result = result.append(state.arena.hardline()).append(state.arena.hardline());
+                result = result
+                    .append(state.arena.hardline())
+                    .append(state.arena.hardline());
             }
         }
         result
@@ -35,7 +40,9 @@ impl<'a> ToDoc<'a> for Block {
             Block::ThematicBreak => state.arena.text("---"),
             Block::BlockQuote(blocks) => blocks.to_doc(state),
             Block::List(v) => v.to_doc(state),
-            Block::CodeBlock(v) => state.arena.text(v.literal.trim_end_matches('\n').to_string()),
+            Block::CodeBlock(v) => state
+                .arena
+                .text(v.literal.trim_end_matches('\n').to_string()),
             Block::HtmlBlock(_) => state.arena.nil(),
             Block::Definition(_) => state.arena.nil(),
             Block::Table(v) => v.to_doc(state),

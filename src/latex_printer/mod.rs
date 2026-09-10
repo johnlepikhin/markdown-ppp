@@ -202,7 +202,8 @@ pub fn render_latex(ast: &Document, config: crate::latex_printer::config::Config
     let doc = ast.to_doc(&state);
 
     let mut buf = Vec::new();
-    doc.render(state.config.width, &mut buf).expect("Vec<u8> write is infallible");
+    doc.render(state.config.width, &mut buf)
+        .expect("Vec<u8> write is infallible");
     String::from_utf8(buf).expect("pretty crate always produces valid UTF-8")
 }
 
@@ -220,4 +221,3 @@ impl<'a> ToDoc<'a> for Document {
         self.blocks.to_doc(state)
     }
 }
-

@@ -1,8 +1,18 @@
 use pretty::{Arena, DocAllocator, DocBuilder};
+use std::borrow::Cow;
 
-pub(crate) fn escape(value: &str) -> String {
-    let mut escaped = String::new();
-    for c in value.chars() {
+/// Escape `& < > " '` for HTML. Borrows the input when there is nothing to escape,
+/// which is the common case for text nodes.
+pub(crate) fn escape(value: &str) -> Cow<'_, str> {
+    let first = value
+        .bytes()
+        .position(|b| matches!(b, b'&' | b'<' | b'>' | b'"' | b'\''));
+    let Some(first) = first else {
+        return Cow::Borrowed(value);
+    };
+    let mut escaped = String::with_capacity(value.len() + 8);
+    escaped.push_str(&value[..first]);
+    for c in value[first..].chars() {
         match c {
             '&' => escaped.push_str("&amp;"),
             '<' => escaped.push_str("&lt;"),
@@ -12,7 +22,7 @@ pub(crate) fn escape(value: &str) -> String {
             _ => escaped.push(c),
         }
     }
-    escaped
+    Cow::Owned(escaped)
 }
 
 /// Render `<tag attr="value" ...>inner</tag>`.
@@ -26,27 +36,26 @@ pub(crate) fn tag<'a>(
     attributes: Vec<(String, String)>,
     inner: DocBuilder<'a, Arena<'a>, ()>,
 ) -> DocBuilder<'a, Arena<'a>, ()> {
-    let mut attrs = state.arena.nil();
+    // One text node per tag instead of one per token: the pretty-printer arena is
+    // the dominant cost of rendering, and a tag never breaks across lines anyway.
+    let mut open_tag = String::with_capacity(tag.len() + 2);
+    open_tag.push('<');
+    open_tag.push_str(tag);
     for (key, value) in attributes {
-        let attr = state
-            .arena
-            .text(" ")
-            .append(state.arena.text(key))
-            .append(state.arena.text("=\""))
-            .append(state.arena.text(escape(&value)))
-            .append(state.arena.text("\""));
-        attrs = attrs.append(attr);
+        open_tag.push(' ');
+        open_tag.push_str(&key);
+        open_tag.push_str("=\"");
+        open_tag.push_str(&escape(&value));
+        open_tag.push('"');
     }
-    let open_tag = state
+    open_tag.push('>');
+    let mut close_tag = String::with_capacity(tag.len() + 3);
+    close_tag.push_str("</");
+    close_tag.push_str(tag);
+    close_tag.push('>');
+    state
         .arena
-        .text("<")
-        .append(state.arena.text(tag))
-        .append(attrs)
-        .append(state.arena.text(">"));
-    let close_tag = state
-        .arena
-        .text("</")
-        .append(state.arena.text(tag))
-        .append(state.arena.text(">"));
-    open_tag.append(inner).append(close_tag)
+        .text(open_tag)
+        .append(inner)
+        .append(state.arena.text(close_tag))
 }

@@ -1,4 +1,5 @@
 use crate::ast::{CodeBlock, CodeBlockKind};
+use crate::parser::util::char_m_n;
 use crate::parser::util::*;
 use crate::parser::MarkdownParserState;
 use nom::{
@@ -6,7 +7,7 @@ use nom::{
     bytes::complete::tag,
     character::complete::char,
     combinator::{not, opt, peek, recognize, value},
-    multi::{many0, many1, many_m_n},
+    multi::{many0, many1},
     sequence::preceded,
     IResult, Parser,
 };
@@ -29,7 +30,7 @@ pub(crate) fn code_block_indented<'a>(
 ) -> impl FnMut(&'a str) -> IResult<&'a str, CodeBlock> {
     move |input: &'a str| {
         let line_parser = preceded(
-            alt((value((), many_m_n(4, 4, char(' '))), value((), char('\t')))),
+            alt((value((), char_m_n(4, 4, ' ')), value((), char('\t')))),
             line_terminated(not_eof_or_eol0),
         );
 
@@ -49,7 +50,7 @@ pub(crate) fn code_block_fenced<'a>(
     state: Rc<MarkdownParserState>,
 ) -> impl FnMut(&'a str) -> IResult<&'a str, CodeBlock> {
     move |input: &'a str| {
-        let (input, space_prefix) = many_m_n(0, 3, char(' ')).parse(input)?;
+        let (input, space_prefix) = char_m_n(0, 3, ' ').parse(input)?;
         // Only strip prefix indentation when NOT in nested context.
         // In nested context (inside list items, blockquotes, etc.), the container
         // parser already stripped the container's indentation from the content.
@@ -61,15 +62,15 @@ pub(crate) fn code_block_fenced<'a>(
 
         let (input, (fence, info)) = line_terminated((
             recognize(alt((
-                many_m_n(3, usize::MAX, char('`')),
-                many_m_n(3, usize::MAX, char('~')),
+                char_m_n(3, usize::MAX, '`'),
+                char_m_n(3, usize::MAX, '~'),
             ))),
             opt(recognize(not_eof_or_eol1)),
         ))
         .parse(input)?;
         let ending_fence = || {
             line_terminated((
-                many_m_n(0, 3, char(' ')),
+                char_m_n(0, 3, ' '),
                 tag(fence),
                 many0(char(fence.chars().next().unwrap())),
             ))
@@ -78,7 +79,7 @@ pub(crate) fn code_block_fenced<'a>(
         let (input, lines) = many0(preceded(
             peek(not(ending_fence())),
             preceded(
-                many_m_n(0, prefix_length, char(' ')),
+                char_m_n(0, prefix_length, ' '),
                 line_terminated(not_eof_or_eol0),
             ),
         ))

@@ -4,7 +4,10 @@ use crate::html_printer::ToDoc;
 use pretty::{Arena, DocAllocator, DocBuilder};
 
 impl<'a> ToDoc<'a> for Vec<Block> {
-    fn to_doc(&self, state: &'a crate::html_printer::State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
+    fn to_doc(
+        &'a self,
+        state: &'a crate::html_printer::State<'a>,
+    ) -> DocBuilder<'a, Arena<'a>, ()> {
         state
             .arena
             .concat(self.iter().map(|block| block.to_doc(state)))
@@ -12,7 +15,10 @@ impl<'a> ToDoc<'a> for Vec<Block> {
 }
 
 impl<'a> ToDoc<'a> for Vec<&Block> {
-    fn to_doc(&self, state: &'a crate::html_printer::State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
+    fn to_doc(
+        &'a self,
+        state: &'a crate::html_printer::State<'a>,
+    ) -> DocBuilder<'a, Arena<'a>, ()> {
         state
             .arena
             .concat(self.iter().map(|block| block.to_doc(state)))
@@ -20,7 +26,10 @@ impl<'a> ToDoc<'a> for Vec<&Block> {
 }
 
 impl<'a> ToDoc<'a> for Block {
-    fn to_doc(&self, state: &'a crate::html_printer::State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
+    fn to_doc(
+        &'a self,
+        state: &'a crate::html_printer::State<'a>,
+    ) -> DocBuilder<'a, Arena<'a>, ()> {
         match self {
             Block::Paragraph(inlines) => {
                 let inner = state
@@ -64,7 +73,10 @@ impl<'a> ToDoc<'a> for Block {
 }
 
 impl<'a> ToDoc<'a> for List {
-    fn to_doc(&self, state: &'a crate::html_printer::State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
+    fn to_doc(
+        &'a self,
+        state: &'a crate::html_printer::State<'a>,
+    ) -> DocBuilder<'a, Arena<'a>, ()> {
         let items = state
             .arena
             .concat(self.items.iter().map(|item| item.to_doc(state)));
@@ -93,7 +105,10 @@ impl<'a> ToDoc<'a> for List {
 }
 
 impl<'a> ToDoc<'a> for ListItem {
-    fn to_doc(&self, state: &'a crate::html_printer::State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
+    fn to_doc(
+        &'a self,
+        state: &'a crate::html_printer::State<'a>,
+    ) -> DocBuilder<'a, Arena<'a>, ()> {
         let task = match self.task {
             Some(TaskState::Complete) => tag(
                 state,
@@ -123,7 +138,10 @@ impl<'a> ToDoc<'a> for ListItem {
 }
 
 impl<'a> ToDoc<'a> for CodeBlock {
-    fn to_doc(&self, state: &'a crate::html_printer::State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
+    fn to_doc(
+        &'a self,
+        state: &'a crate::html_printer::State<'a>,
+    ) -> DocBuilder<'a, Arena<'a>, ()> {
         tag(
             state,
             "pre",
@@ -141,7 +159,10 @@ impl<'a> ToDoc<'a> for CodeBlock {
 }
 
 impl<'a> ToDoc<'a> for Table {
-    fn to_doc(&self, state: &'a crate::html_printer::State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
+    fn to_doc(
+        &'a self,
+        state: &'a crate::html_printer::State<'a>,
+    ) -> DocBuilder<'a, Arena<'a>, ()> {
         let first_row = table_row_to_doc(state, self.rows.first().unwrap(), "th", &self.alignments);
         let mut acc = state.arena.nil();
         for row in self.rows.iter().skip(1) {
@@ -157,7 +178,7 @@ impl<'a> ToDoc<'a> for Table {
 
 fn table_row_to_doc<'a>(
     state: &'a crate::html_printer::State<'a>,
-    row: &TableRow,
+    row: &'a TableRow,
     row_tag: &'static str,
     alignments: &[Alignment],
 ) -> DocBuilder<'a, Arena<'a>, ()> {
@@ -178,7 +199,10 @@ fn table_row_to_doc<'a>(
 }
 
 impl<'a> ToDoc<'a> for FootnoteDefinition {
-    fn to_doc(&self, state: &'a crate::html_printer::State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
+    fn to_doc(
+        &'a self,
+        state: &'a crate::html_printer::State<'a>,
+    ) -> DocBuilder<'a, Arena<'a>, ()> {
         let index = match state.get_footnote_index(&self.label) {
             Some(v) => v,
             None => return state.arena.nil(),

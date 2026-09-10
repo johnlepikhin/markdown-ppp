@@ -1,12 +1,9 @@
 use crate::ast::Block;
+use crate::parser::util::char_m_n;
 use crate::parser::util::*;
 use crate::parser::MarkdownParserState;
 use nom::{
-    character::complete::char,
-    combinator::opt,
-    multi::{many0, many1, many_m_n},
-    sequence::preceded,
-    IResult, Parser,
+    character::complete::char, combinator::opt, multi::many1, sequence::preceded, IResult, Parser,
 };
 use std::rc::Rc;
 
@@ -15,7 +12,7 @@ use std::rc::Rc;
 /// Used as a cheap lookahead (e.g. to decide whether a line interrupts a paragraph)
 /// without parsing the quote content.
 pub(crate) fn blockquote_start(input: &str) -> IResult<&str, char> {
-    preceded(many_m_n(0, 3, char(' ')), char('>')).parse(input)
+    preceded(char_m_n(0, 3, ' '), char('>')).parse(input)
 }
 
 pub(crate) fn blockquote<'a>(
@@ -32,11 +29,8 @@ pub(crate) fn blockquote<'a>(
 
         // `many0`: a bare `>` line is an empty block quote, not a paragraph.
         let nested_state = Rc::new(state.nested());
-        let (_, inner) = many0(crate::parser::blocks::block(nested_state))
-            .parse(&inner)
+        let (_, inner) = crate::parser::blocks::blocks_many0(nested_state, &inner)
             .map_err(|err| err.map_input(|_| input))?;
-
-        let inner = inner.into_iter().flatten().collect();
 
         Ok((input, inner))
     }

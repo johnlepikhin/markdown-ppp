@@ -1,10 +1,11 @@
+use crate::parser::util::char_m_n;
 use crate::parser::util::*;
 use crate::parser::MarkdownParserState;
 use nom::{
     branch::alt,
     character::complete::{char, space0},
     combinator::map,
-    multi::{many, many_m_n},
+    multi::many,
     sequence::{preceded, terminated},
     IResult, Parser,
 };
@@ -16,7 +17,7 @@ pub(crate) fn thematic_break<'a>(
     move |input: &str| {
         map(
             line_terminated(preceded(
-                many_m_n(0, 3, char(' ')),
+                char_m_n(0, 3, ' '),
                 terminated(
                     alt((
                         many(3.., char('-')),

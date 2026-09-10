@@ -1,5 +1,5 @@
 use crate::ast::Inline;
-use nom::multi::many_m_n;
+use crate::parser::util::char_m_n;
 use nom::{
     branch::alt,
     character::complete::{char, line_ending},
@@ -13,7 +13,7 @@ pub(crate) fn hard_newline(input: &str) -> IResult<&str, Inline> {
         Inline::LineBreak,
         alt((
             value((), pair(char('\\'), line_ending)),
-            value((), pair(many_m_n(2, usize::MAX, char(' ')), line_ending)),
+            value((), pair(char_m_n(2, usize::MAX, ' '), line_ending)),
         )),
     )
     .parse(input)

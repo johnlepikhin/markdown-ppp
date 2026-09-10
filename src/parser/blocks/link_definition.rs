@@ -1,12 +1,13 @@
 use super::eof_or_eol;
 use crate::ast::LinkDefinition;
-use crate::parser::link_util::{link_destination, link_label, link_title};
+use crate::parser::link_util::{link_destination, link_label_content, link_label_raw, link_title};
+use crate::parser::util::char_m_n;
 use crate::parser::MarkdownParserState;
 use nom::character::complete::{char, line_ending, space0, space1};
 use nom::{
     branch::alt,
     combinator::{opt, recognize, verify},
-    multi::{many1, many_m_n},
+    multi::many1,
     sequence::preceded,
     IResult, Parser,
 };
@@ -30,9 +31,14 @@ pub(crate) fn link_definition<'a>(
             },
         );
 
-        let (input, label) =
-            preceded(many_m_n(0, 3, char(' ')), link_label(state.clone())).parse(input)?;
-        let (input, _) = char(':').parse(input)?;
+        // Check for the `:` before parsing the label content: this parser is also
+        // the lookahead run on every paragraph line, and most lines that start
+        // with `[` are links, not definitions.
+        let (input, _) = char_m_n(0, 3, ' ').parse(input)?;
+        let (after_label, raw) = link_label_raw(&state, input)?;
+        let (input_after_colon, _) = char(':').parse(after_label)?;
+        let label = link_label_content(state.clone(), &raw, input)?;
+        let input = input_after_colon;
         let (input, _) = one_line_whitespace0.parse(input)?;
         let (input, destination) = link_destination(state.clone()).parse(input)?;
         let (input, title) =

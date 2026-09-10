@@ -18,44 +18,23 @@ use rstest::rstest;
 #[case("![alt text](https://example.com/image.png)", "alt text")]
 #[case("<https://example.com>", "https://example.com")]
 // Lists
-#[case(
-    "1. Item 1\n2. Item 2",
-    "1. Item 1\n2. Item 2"
-)]
-#[case(
-    "* Item 1\n* Item 2",
-    "- Item 1\n- Item 2"
-)]
+#[case("1. Item 1\n2. Item 2", "1. Item 1\n2. Item 2")]
+#[case("* Item 1\n* Item 2", "- Item 1\n- Item 2")]
 // Task lists
-#[case(
-    "- [x] Done\n- [ ] Todo",
-    "- [x] Done\n- [ ] Todo"
-)]
+#[case("- [x] Done\n- [ ] Todo", "- [x] Done\n- [ ] Todo")]
 // Heading + paragraph
-#[case(
-    "# Heading\n\nParagraph",
-    "Heading\n\nParagraph"
-)]
+#[case("# Heading\n\nParagraph", "Heading\n\nParagraph")]
 // Thematic break
-#[case(
-    "Above\n\n---\n\nBelow",
-    "Above\n\n---\n\nBelow"
-)]
+#[case("Above\n\n---\n\nBelow", "Above\n\n---\n\nBelow")]
 // Block quote
-#[case(
-    "> Quoted text",
-    "Quoted text"
-)]
+#[case("> Quoted text", "Quoted text")]
 // Footnotes
 #[case(
     "Hello[^1]\n\n[^1]: This is a footnote.",
     "Hello[1]\n\n[1] This is a footnote."
 )]
 // Link references
-#[case(
-    "[Google][1]\n\n[1]: https://www.google.com 'Search engine'",
-    "Google"
-)]
+#[case("[Google][1]\n\n[1]: https://www.google.com 'Search engine'", "Google")]
 // Tables
 #[case(
     "| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |",
@@ -73,8 +52,10 @@ fn render_to_plaintext(#[case] input: &str, #[case] expected: &str) {
 #[test]
 fn empty_document() {
     let doc = crate::ast::Document { blocks: vec![] };
-    let result =
-        crate::plaintext_printer::render_plaintext(&doc, crate::plaintext_printer::config::Config::default());
+    let result = crate::plaintext_printer::render_plaintext(
+        &doc,
+        crate::plaintext_printer::config::Config::default(),
+    );
     assert_eq!("", result);
 }
 

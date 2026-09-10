@@ -62,7 +62,6 @@ use nom::{
     character::complete::{line_ending, space1},
     combinator::eof,
     multi::many0,
-    sequence::terminated,
     Parser,
 };
 use std::rc::Rc;
@@ -261,14 +260,9 @@ pub fn parse_markdown(
     state: MarkdownParserState,
     input: &str,
 ) -> Result<Document, nom::Err<nom::error::Error<&str>>> {
+    let (rest, blocks) = crate::parser::blocks::blocks_many0(Rc::new(state), input)?;
     let empty_lines = many0(alt((space1, line_ending)));
-    let mut parser = terminated(
-        many0(crate::parser::blocks::block(Rc::new(state))),
-        (empty_lines, eof),
-    );
-    let (_, blocks) = parser.parse(input)?;
-
-    let blocks = blocks.into_iter().flatten().collect();
+    let (_, _) = (empty_lines, eof).parse(rest)?;
 
     Ok(Document { blocks })
 }

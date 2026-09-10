@@ -110,4 +110,3 @@ impl<'a> ToDoc<'a> for Document {
         self.blocks.to_doc(state)
     }
 }
-

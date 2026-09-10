@@ -4,7 +4,10 @@ use crate::html_printer::ToDoc;
 use pretty::{Arena, DocAllocator, DocBuilder};
 
 impl<'a> ToDoc<'a> for Vec<Inline> {
-    fn to_doc(&self, state: &'a crate::html_printer::State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
+    fn to_doc(
+        &'a self,
+        state: &'a crate::html_printer::State<'a>,
+    ) -> DocBuilder<'a, Arena<'a>, ()> {
         state
             .arena
             .concat(self.iter().map(|inline| inline.to_doc(state)))
@@ -12,7 +15,10 @@ impl<'a> ToDoc<'a> for Vec<Inline> {
 }
 
 impl<'a> ToDoc<'a> for Inline {
-    fn to_doc(&self, state: &'a crate::html_printer::State<'a>) -> DocBuilder<'a, Arena<'a>, ()> {
+    fn to_doc(
+        &'a self,
+        state: &'a crate::html_printer::State<'a>,
+    ) -> DocBuilder<'a, Arena<'a>, ()> {
         match self {
             Inline::Text(t) => state.arena.text(escape(t)),
             Inline::LineBreak => tag(state, "br", Vec::new(), state.arena.nil()),

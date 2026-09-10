@@ -1,11 +1,12 @@
 use crate::ast::{Block, Heading, HeadingKind, SetextHeading};
+use crate::parser::util::char_m_n;
 use crate::parser::util::*;
 use crate::parser::MarkdownParserState;
 use nom::{
     branch::alt,
     character::complete::{char, space0, space1},
     combinator::{opt, value},
-    multi::{many1, many_m_n},
+    multi::many1,
     sequence::{preceded, terminated},
     IResult, Parser,
 };
@@ -24,7 +25,7 @@ pub(crate) fn heading_v1<'a>(
         };
 
         let (input, (prefix, _, content)) = (
-            many_m_n(1, 6, char('#')),
+            char_m_n(1, 6, '#'),
             to_space_or_not_to_space,
             line_terminated(not_eof_or_eol1),
         )
@@ -76,7 +77,7 @@ pub(crate) fn heading_v2_level<'a>(
         ));
 
         let r = line_terminated(preceded(
-            many_m_n(0, 3, char(' ')),
+            char_m_n(0, 3, ' '),
             terminated(setext_parser, space0),
         ))
         .parse(input)?;
