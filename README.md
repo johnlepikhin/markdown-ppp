@@ -734,6 +734,83 @@ cargo add markdown-ppp --features latex-printer
 
 ---
 
+## ⚡ Performance
+
+Markdown → HTML, compared with [pandoc](https://pandoc.org/). Every number below
+was measured in one sitting on one machine; absolute values will differ on
+yours, ratios should hold. The ratio column is pandoc divided by markdown-ppp:
+how many times less time, fewer instructions or less memory markdown-ppp needs.
+
+**Versions and environment**
+
+ - markdown-ppp: this repository at the commit that added this section,
+   `cargo build --release` with `opt-level = 3`, `lto = true`,
+   `codegen-units = 1`; rustc 1.88.0.
+ - pandoc 2.19.2 (Guix package), invoked as
+   `pandoc -f commonmark -t html --wrap=none FILE`.
+ - Linux x86-64, Intel Core Ultra 7 155H; every run pinned to one performance
+   core with `taskset`.
+
+**Method**
+
+ - Both converters run as a whole process: read the file, parse, render HTML,
+   write it to stdout. markdown-ppp is wrapped in a minimal binary that calls
+   `parse_markdown` followed by `render_html` with default configuration. This
+   is the only comparison possible with pandoc, and it is the less favourable
+   one for a library, because it includes process start-up.
+ - Wall time: median of 10 runs (5 for pandoc) after one warm-up run, spawned
+   with `posix_spawn` from a Rust harness.
+ - Peak RSS: `ru_maxrss` from `getrusage(RUSAGE_CHILDREN)` in the same harness,
+   one converter per harness process.
+ - Instructions: `perf stat -e instructions:u` over the whole process, so
+   pandoc's figure includes its garbage collector and markdown-ppp's includes
+   freeing the AST.
+ - Inputs: four public documents, downloaded on 2026-09-10: [Rust
+   README](https://github.com/rust-lang/rust/blob/master/README.md) (3,304 B),
+   [CommonMark spec
+   source](https://github.com/commonmark/commonmark-spec/blob/master/spec.txt)
+   (206,108 B), [Kubernetes 1.34
+   changelog](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.34.md)
+   (440,462 B), [Rust release
+   notes](https://github.com/rust-lang/rust/blob/master/RELEASES.md) (918,663
+   B).
+ - Output correctness is not part of this comparison: the two converters do not
+   produce byte-identical HTML.
+
+**Whole process: wall time**
+
+| document             | markdown-ppp |  pandoc | ratio |
+| -------------------- | -----------: | ------: | ----: |
+| Rust README          |      0.61 ms | 16.0 ms |   26× |
+| CommonMark spec      |       4.1 ms |  432 ms |  106× |
+| Kubernetes changelog |       9.9 ms |  352 ms |   36× |
+| Rust release notes   |      32.3 ms |  740 ms |   23× |
+
+**Whole process: user-space instructions**
+
+| document             | markdown-ppp |  pandoc | ratio |
+| -------------------- | -----------: | ------: | ----: |
+| Rust README          |        6.2 M |    38 M |    6× |
+| CommonMark spec      |         46 M | 4,564 M |   99× |
+| Kubernetes changelog |        104 M | 4,221 M |   41× |
+| Rust release notes   |        293 M | 7,556 M |   26× |
+
+**Whole process: peak RSS**
+
+| document             | markdown-ppp |  pandoc | ratio |
+| -------------------- | -----------: | ------: | ----: |
+| Rust README          |      3.3 MiB |  25 MiB |  7.6× |
+| CommonMark spec      |      5.3 MiB | 151 MiB |   28× |
+| Kubernetes changelog |      8.8 MiB | 115 MiB |   13× |
+| Rust release notes   |     21.1 MiB | 199 MiB |  9.4× |
+
+Called as a library there is no process to start. In-process, the same
+conversions (parse plus HTML rendering, median of 20 iterations in one process)
+take 0.075 ms, 3.1 ms, 8.1 ms and 27.5 ms respectively; parsing alone is 0.047
+ms, 2.1 ms, 5.8 ms and 19.2 ms.
+
+---
+
 ## 📚 Documentation
 
  - [API Docs on docs.rs](https://docs.rs/markdown-ppp)
